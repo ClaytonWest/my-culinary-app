@@ -2,7 +2,7 @@
 
 
 
-You are an expert full-stack developer. Your task is to build a production-ready AI-powered cooking assistant using the specifications below. Follow this plan step-by-step, implementing each phase completely before moving to the next.
+You are an expert full-stack developer. Your task is to build a production-ready AI-powered cooking assistant using the specifications below. Follow this plan step-by-step, implementing each phase completely.
 
 ---
 
@@ -94,12 +94,12 @@ export default defineSchema({
   userProfiles: defineTable({
     userId: v.id("users"),
     name: v.optional(v.string()),
-    avatarStorageId: v.optional(v.id("_storage")),
+**    avatarStorageId: v.optional(v.id("_storage")),**
     subscriptionTier: v.union(v.literal("free"), v.literal("premium")),
     stripeCustomerId: v.optional(v.string()),
     dailyRequestCount: v.number(),
     lastRequestReset: v.number(),
-    onboardingCompleted: v.boolean(),
+**    onboardingCompleted: v.boolean(),**
     createdAt: v.number(),
   })
     .index("by_userId", ["userId"])
@@ -110,12 +110,13 @@ export default defineSchema({
     userId: v.id("users"),
     fact: v.string(),
     category: v.union(
-      v.literal("preference"),
-      v.literal("personal"),
-      v.literal("behavioral"),
-      v.literal("constraint"),
-      v.literal("goal")
-    ),
+  v.literal("allergy"),       // Medical, potentially life-threatening — never include, flag cross-contamination
+  v.literal("intolerance"),   // Medical but not severe — avoid, but traces acceptable
+  v.literal("restriction"),   // Hard limit, non-medical — religious, ethical (vegan, halal, kosher)
+  v.literal("preference"),    // Flexible — dislikes, lifestyle choices, "I don't love cilantro"
+  v.literal("goal")           // Aspirational — "trying to eat less sugar", "high protein"
+),
+    **If the confidence is high that is the only time we want to store the context**
     confidence: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
     extractedAt: v.number(),
     sourceConversationId: v.optional(v.id("conversations")),
@@ -144,13 +145,13 @@ export default defineSchema({
     imageStorageId: v.optional(v.id("_storage")),
     imageAnalysis: v.optional(v.string()),
     linkedRecipeId: v.optional(v.id("recipes")),
-    isStreaming: v.boolean(),
+   ** WHy do we need is streaming? isStreaming: v.boolean(),**
     createdAt: v.number(),
   })
     .index("by_conversationId", ["conversationId"])
     .index("by_userId", ["userId"]),
 
-  // Saved recipes
+ ** How do we plan to get all of this data? does our prompt to gpt when a recipe response is needed responds in this format? Should we trim anymore of these fields // Saved recipes
   recipes: defineTable({
     userId: v.id("users"),
     title: v.string(),
@@ -197,9 +198,10 @@ export default defineSchema({
     .searchIndex("search_title", {
       searchField: "title",
       filterFields: ["userId", "mealType"],
-    }),
+    }),**
 
-  // Recipe interaction history
+**  Do we need a whole recipe interation history? or would pinning recipes/creating nameable folders for them be suffice?
+// Recipe interaction history
   recipeHistory: defineTable({
     userId: v.id("users"),
     recipeId: v.id("recipes"),
@@ -219,7 +221,7 @@ export default defineSchema({
     .index("by_userId_action", ["userId", "action"]),
 
 
-});
+});**
 ```
 
 ### 1.4 Auth Helper Functions
@@ -512,16 +514,19 @@ import { mutation, query, action, internalMutation } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
 import { internal } from "./_generated/api";
 
+**REMEMBER WE UPDATED THIS TO HAVE NEW CATEGORIES, IF ANY CATEGORIES EXIST IN THIS TABLE ANYWHERE ELSE IN CODE REMOVE IT AND ADD THESE.
 // Get all memories for a user
 export const getMemories = query({
   args: {
-    category: v.optional(v.union(
-      v.literal("preference"),
-      v.literal("personal"),
-      v.literal("behavioral"),
-      v.literal("constraint"),
-      v.literal("goal")
-    )),
+    category: v.union(
+  v.literal("allergy"),       // Medical, potentially life-threatening — never include, flag cross-contamination
+  v.literal("intolerance"),   // Medical but not severe — avoid, but traces acceptable
+  v.literal("restriction"),   // Hard limit, non-medical — religious, ethical (vegan, halal, kosher)
+  v.literal("preference"),    // Flexible — dislikes, lifestyle choices, "I don't love cilantro"
+  v.literal("goal")           // Aspirational — "trying to eat less sugar", "high protein"
+)),**
+
+    
   },
   handler: async (ctx, args) => {
     const userId = await requireAuth(ctx);
@@ -567,12 +572,12 @@ export const addMemories = internalMutation({
     memories: v.array(v.object({
       fact: v.string(),
       category: v.union(
-        v.literal("preference"),
-        v.literal("personal"),
-        v.literal("behavioral"),
-        v.literal("constraint"),
-        v.literal("goal")
-      ),
+  v.literal("allergy"),       // Medical, potentially life-threatening — never include, flag cross-contamination
+  v.literal("intolerance"),   // Medical but not severe — avoid, but traces acceptable
+  v.literal("restriction"),   // Hard limit, non-medical — religious, ethical (vegan, halal, kosher)
+  v.literal("preference"),    // Flexible — dislikes, lifestyle choices, "I don't love cilantro"
+  v.literal("goal")           // Aspirational — "trying to eat less sugar", "high protein"
+),
       confidence: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
     })),
     sourceConversationId: v.optional(v.id("conversations")),
