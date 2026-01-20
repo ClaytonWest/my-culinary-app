@@ -1,4 +1,19 @@
 # AI Cooking Assistant - Master Implementation Plan
+ 
+
+# Refine Master plan ---
+# TODO : 
+# what is lastRequestReset?
+# dietary preferences table slim for mvp
+# Look into conversations and messages tables 
+# meal planning pantry and shopping list are not mvp
+# dynamic allowed restrictions so user can input their restrictions.
+# how should we be storing user preferences maybe not in table
+
+# Phase 4 to change with above TODOS
+# Phase 6 and 7 out of scope for MVP
+
+
 
 You are an expert full-stack developer. Your task is to build a production-ready AI-powered cooking assistant using the specifications below. Follow this plan step-by-step, implementing each phase completely before moving to the next.
 
@@ -9,7 +24,7 @@ You are an expert full-stack developer. Your task is to build a production-ready
 **Stack:**
 - **Frontend:** React 18 + TypeScript + Vite
 - **Backend:** Convex (real-time DB, auth, functions, file storage)
-- **AI:** OpenAI GPT-4o / GPT-4o-mini
+- **AI:** OpenAI GPT-5.2
 - **Payments:** Stripe (premium subscriptions)
 - **Styling:** Tailwind CSS + shadcn/ui
 
