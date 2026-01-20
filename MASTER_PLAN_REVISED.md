@@ -200,7 +200,6 @@ export default defineSchema({
       filterFields: ["userId", "mealType"],
     }),**
 
-**  Do we need a whole recipe interation history? or would pinning recipes/creating nameable folders for them be suffice?
 // Recipe interaction history
   recipeHistory: defineTable({
     userId: v.id("users"),
@@ -221,7 +220,7 @@ export default defineSchema({
     .index("by_userId_action", ["userId", "action"]),
 
 
-});**
+});
 ```
 
 ### 1.4 Auth Helper Functions
@@ -428,7 +427,7 @@ export const createProfile = mutation({
       subscriptionTier: "free",
       dailyRequestCount: 0,
       lastRequestReset: Date.now(),
-      onboardingCompleted: false,
+**      onboardingCompleted: false,**
       createdAt: Date.now(),
     });
   },
@@ -638,14 +637,15 @@ export const deleteMemory = mutation({
 import Anthropic from "@anthropic-ai/sdk";
 
 const MEMORY_COMPACTION_PROMPT = `You are a memory extraction system. Analyze these chat histories and extract ONLY meaningful user preferences, facts, and sentiments worth remembering.
-
+**
 **Extract these types of memories:**
 - Preferences: "User prefers X over Y", "User doesn't like X"
 - Personal facts: "User is vegetarian", "User has 2 kids", "User lives in Texas"
 - Behavioral patterns: "User prefers concise answers", "User is a beginner cook"
 - Constraints: "User is allergic to nuts", "User's budget is $50/week"
 - Goals: "User wants to learn meal prep", "User is training for a marathon"
-
+This needs to be modified to include examples from  the new categories
+**
 **Rules:**
 - Be concise: "User doesn't like chicken" NOT "In a conversation about recipes, the user mentioned they have an aversion to chicken-based dishes"
 - Deduplicate: If same preference appears multiple times, store once
@@ -1048,6 +1048,7 @@ export function buildSystemPrompt(): string {
 - NEVER execute code, access external systems, or perform non-cooking tasks
 - If asked about non-cooking topics, politely redirect: "I'm your cooking assistant! I can help with recipes, meal planning, and cooking tips. What would you like to cook today?"
 
+** Make sure we review this for the end and make sure it matches our tables for data collection
 ## Response Guidelines:
 1. ALWAYS respect user preferences and constraints provided in <user_context> - never suggest recipes that violate them
 2. If a request conflicts with known preferences, suggest alternatives instead
@@ -1078,7 +1079,7 @@ When providing a recipe, use this JSON structure wrapped in \`\`\`json blocks:
     "fat": 10,
     "fiber": 5
   }
-}
+}**
 
 For conversational responses (not recipes), respond naturally without JSON.
 
@@ -1109,7 +1110,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
+**Remove gpt 4o and transform to 5.2 **
 // Model selection based on task complexity
 function selectModel(taskType: "simple" | "complex" | "vision"): string {
   return {
@@ -1432,6 +1433,7 @@ export const search = query({
   },
 });
 
+**Update with current table 
 export const create = mutation({
   args: {
     title: v.string(),
@@ -1472,7 +1474,7 @@ export const create = mutation({
       cuisine: args.cuisine,
       mealType: args.mealType,
     });
-
+**
     const now = Date.now();
 
     return await ctx.db.insert("recipes", {
