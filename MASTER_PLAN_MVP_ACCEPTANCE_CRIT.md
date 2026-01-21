@@ -2284,8 +2284,101 @@ describe("Memory Priority", () => {
 
 ## Phase 8: Stripe Integration (Premium)
 
-*[Stripe section remains the same as original]*
+### 8.1 Stripe Functions
 
+```typescript
+// convex/stripe.ts
+import { v } from "convex/values";
+import { action, mutation, httpAction } from "./_generated/server";
+import { internal } from "./_generated/api";
+import Stripe from "stripe";
+import { getAuthUserId } from "@convex-dev/auth/server";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+export const createCheckoutSession = action({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+
+    const profile = await ctx.runQuery(internal.users.getProfileInternal, { userId });
+    if (!profile) throw new Error("Profile not found");
+
+    // Get or create Stripe customer
+    let customerId = profile.stripeCustomerId;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        metadata: { convexUserId: userId },
+      });
+      customerId = customer.id;
+
+      await ctx.runMutation(internal.users.setStripeCustomerId, {
+        profileId: profile._id,
+        stripeCustomerId: customerId,
+      });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: "subscription",
+      line_items: [
+        {
+          price: process.env.STRIPE_PREMIUM_PRICE_ID,
+          quantity: 1,
+        },
+      ],
+      success_url: `${process.env.APP_URL}/settings?success=true`,
+      cancel_url: `${process.env.APP_URL}/settings?canceled=true`,
+    });
+
+    return { url: session.url };
+  },
+});
+
+// convex/http.ts (add to existing)
+export const stripeWebhook = httpAction(async (ctx, request) => {
+  const signature = request.headers.get("stripe-signature");
+  if (!signature) {
+    return new Response("Missing signature", { status: 400 });
+  }
+
+  const body = await request.text();
+
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET!
+    );
+  } catch {
+    return new Response("Invalid signature", { status: 400 });
+  }
+
+  switch (event.type) {
+    case "customer.subscription.created":
+    case "customer.subscription.updated": {
+      const subscription = event.data.object as Stripe.Subscription;
+      await ctx.runMutation(internal.users.updateSubscription, {
+        stripeCustomerId: subscription.customer as string,
+        tier: subscription.status === "active" ? "premium" : "free",
+      });
+      break;
+    }
+    case "customer.subscription.deleted": {
+      const subscription = event.data.object as Stripe.Subscription;
+      await ctx.runMutation(internal.users.updateSubscription, {
+        stripeCustomerId: subscription.customer as string,
+        tier: "free",
+      });
+      break;
+    }
+  }
+
+  return new Response("OK", { status: 200 });
+});
+```
 ---
 
 ## Environment Variables
