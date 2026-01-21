@@ -165,6 +165,7 @@ export default defineSchema({
     prepTime: v.optional(v.number()),
     cookTime: v.optional(v.number()),
     servings: v.number(),
+    ** nutrition cuisine and mealtype are out of scope for mvp **
     nutrition: v.optional(v.object({
       calories: v.number(),
       protein: v.number(),
@@ -1039,6 +1040,7 @@ export function buildSystemPrompt(): string {
 1. Generate recipes based on user requests and available ingredients
 2. Provide cooking guidance, techniques, and tips
 3. Analyze ingredient photos and suggest recipes
+** nutrition cuisine and mealtype are out of scope for mvp**
 4. Calculate nutrition information when requested
 
 ## Constraints (MUST follow):
@@ -1072,6 +1074,7 @@ When providing a recipe, use this JSON structure wrapped in \`\`\`json blocks:
     "Step 2..."
   ],
   "tips": ["Optional tips..."],
+  ** nutrition cuisine and mealtype are out of scope for mvp **
   "nutrition": {
     "calories": 300,
     "protein": 15,
@@ -1447,6 +1450,7 @@ export const create = mutation({
     servings: v.number(),
     prepTime: v.optional(v.number()),
     cookTime: v.optional(v.number()),
+    ** nutrition cuisine and mealtype are out of scope for mvp **
     cuisine: v.optional(v.string()),
     mealType: v.optional(v.union(
       v.literal("breakfast"),
@@ -1471,6 +1475,7 @@ export const create = mutation({
       servings: args.servings,
       prepTime: args.prepTime,
       cookTime: args.cookTime,
+      ** nutrition cuisine and mealtype are out of scope for mvp**
       cuisine: args.cuisine,
       mealType: args.mealType,
     });
@@ -1486,6 +1491,7 @@ export const create = mutation({
       servings: args.servings,
       prepTime: args.prepTime,
       cookTime: args.cookTime,
+      ** nutrition cuisine and mealtype are out of scope for mvp**
       cuisine: args.cuisine,
       mealType: args.mealType,
       dietaryTags: args.dietaryTags ?? [],
@@ -1645,7 +1651,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 ```
 
 ### 6.3 Router Setup
-
+** pantry, MEALPLAN, SHOPPING routes and features out of scope for mvp**
 ```typescript
 // src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -1657,9 +1663,11 @@ import { Onboarding } from "./pages/Onboarding";
 import { Chat } from "./pages/Chat";
 import { Recipes } from "./pages/Recipes";
 import { RecipeDetail } from "./pages/RecipeDetail";
+
 import { Pantry } from "./pages/Pantry";
 import { MealPlan } from "./pages/MealPlan";
 import { Shopping } from "./pages/Shopping";
+
 import { Settings } from "./pages/Settings";
 import { LoadingSpinner } from "./components/shared/LoadingSpinner";
 
@@ -1698,9 +1706,12 @@ export default function App() {
           <Route path="chat/:conversationId?" element={<Chat />} />
           <Route path="recipes" element={<Recipes />} />
           <Route path="recipes/:recipeId" element={<RecipeDetail />} />
+
+          //** PANTRY, MEALPLAN, SHOPPING routes and features out of scope for mvp**
           <Route path="pantry" element={<Pantry />} />
           <Route path="meal-plan" element={<MealPlan />} />
           <Route path="shopping" element={<Shopping />} />
+
           <Route path="settings" element={<Settings />} />
           <Route path="onboarding" element={<Onboarding />} />
         </Route>
@@ -1926,7 +1937,7 @@ export function QueryWrapper<T>({
 ---
 
 ## Phase 7: Testing
-
+** might have to expand unit test to cover all features **
 ### 7.1 Test Setup
 
 ```typescript
