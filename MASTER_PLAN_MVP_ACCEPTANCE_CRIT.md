@@ -127,7 +127,6 @@ export default defineSchema({
       v.literal("preference"),    // Flexible — dislikes, lifestyle choices, "I don't love cilantro"
       v.literal("goal"),          // Aspirational — "trying to eat less sugar", "high protein"
       v.literal("equipment"),     // Kitchen equipment constraints — "no oven", "only microwave", "has instant pot"
-      v.literal("household")      // Household context — "cooking for family of 4", "meal prep for one"
     ),
     confidence: v.literal("high"), // MVP: Only store high-confidence facts
     extractedAt: v.number(),
@@ -520,7 +519,7 @@ export const checkRateLimit = mutation({
 
 **Key Enhancements:**
 - Auto-triggering after 10+ messages OR 24 hours since last compaction
-- Enhanced extraction prompt with culinary-specific patterns (equipment, household size)
+- Enhanced extraction prompt with culinary-specific patterns (equipment)
 - Priority ordering: allergies FIRST in context injection (survives truncation)
 
 ```typescript
@@ -538,7 +537,6 @@ const memoryCategory = v.union(
   v.literal("preference"),    // Flexible — dislikes, lifestyle choices, "I don't love cilantro"
   v.literal("goal"),          // Aspirational — "trying to eat less sugar", "high protein"
   v.literal("equipment"),     // Kitchen equipment — "no oven", "has instant pot", "small kitchen"
-  v.literal("household")      // Household context — "family of 4", "cooking for one", "meal prepping"
 );
 
 // Priority order for context injection (allergies first = survives truncation)
@@ -547,7 +545,6 @@ const CATEGORY_PRIORITY = [
   "intolerance",  // Important - health
   "restriction",  // Hard limits
   "equipment",    // Practical constraints
-  "household",    // Context for portions
   "goal",         // Aspirational
   "preference",   // Nice-to-have
 ] as const;
@@ -615,10 +612,6 @@ export const getMemoryContext = query({
       context += `🍳 KITCHEN EQUIPMENT:\n`;
       context += grouped.equipment.map(m => `  • ${m.fact}`).join("\n") + "\n\n";
     }
-    if (grouped.household.length > 0) {
-      context += `👥 HOUSEHOLD CONTEXT:\n`;
-      context += grouped.household.map(m => `  • ${m.fact}`).join("\n") + "\n\n";
-    }
     if (grouped.goal.length > 0) {
       context += `🎯 DIETARY GOALS:\n`;
       context += grouped.goal.map(m => `  • ${m.fact}`).join("\n") + "\n\n";
@@ -679,7 +672,7 @@ export const addMemories = internalMutation({
     }
   },
 });
-
+** Frank- not sure if we want this 
 // Internal: Remove outdated memories (for conflict resolution)
 export const removeMemory = internalMutation({
   args: {
@@ -724,7 +717,7 @@ export const addMemoryManual = mutation({
   },
 });
 ```
-
+**
 ```typescript
 // convex/lib/memoryCompaction.ts
 import OpenAI from "openai";
@@ -745,14 +738,11 @@ const MEMORY_COMPACTION_PROMPT = `You are a memory extraction system for a culin
    
 4. "equipment" - Kitchen equipment constraints or capabilities
    Examples: "User doesn't have an oven", "User only has a microwave", "User has an Instant Pot", "User has a small kitchen", "User has no stand mixer"
-   
-5. "household" - Household context affecting portions/planning
-   Examples: "User cooks for a family of 4", "User lives alone", "User meal preps on Sundays", "User has young children", "User's partner is vegetarian"
-   
-6. "goal" - Aspirational dietary goals
+    
+5. "goal" - Aspirational dietary goals
    Examples: "User is trying to eat less sugar", "User wants high-protein meals", "User is training for a marathon", "User wants to lose weight"
    
-7. "preference" - Flexible dislikes, lifestyle choices (LOWEST PRIORITY)
+6. "preference" - Flexible dislikes, lifestyle choices (LOWEST PRIORITY)
    Examples: "User doesn't like cilantro", "User prefers spicy food", "User dislikes mushrooms", "User loves Italian cuisine"
 
 **Extraction Rules:**
@@ -770,7 +760,6 @@ const MEMORY_COMPACTION_PROMPT = `You are a memory extraction system for a culin
     {"fact": "User is allergic to tree nuts", "category": "allergy", "confidence": "high"},
     {"fact": "User is vegan", "category": "restriction", "confidence": "high"},
     {"fact": "User doesn't have an oven", "category": "equipment", "confidence": "high"},
-    {"fact": "User cooks for family of 4", "category": "household", "confidence": "high"}
   ],
   "conflicts_resolved": [
     {"old": "User is vegetarian", "new": "User is vegan", "reason": "User clarified they went fully vegan"}
@@ -788,7 +777,7 @@ If no new facts to extract, return: {"memories": [], "conflicts_resolved": []}
 
 interface Memory {
   fact: string;
-  category: "allergy" | "intolerance" | "restriction" | "preference" | "goal" | "equipment" | "household";
+  category: "allergy" | "intolerance" | "restriction" | "preference" | "goal" | "equipment";
   confidence: "high";
 }
 
@@ -2255,7 +2244,6 @@ const CATEGORY_PRIORITY = [
   "intolerance", 
   "restriction",
   "equipment",
-  "household",
   "goal",
   "preference",
 ];
@@ -2378,7 +2366,7 @@ export const stripeWebhook = httpAction(async (ctx, request) => {
 
   return new Response("OK", { status: 200 });
 });
-```
+```AAAA
 ---
 
 ## Environment Variables
