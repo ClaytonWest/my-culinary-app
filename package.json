@@ -1,6 +1,7 @@
 {
-  "name": "convex-tutorial",
+  "name": "culinary-ai-assistant",
   "version": "0.0.0",
+  "type": "module",
   "scripts": {
     "dev": "npm-run-all --parallel dev:backend dev:frontend",
     "build": "tsc && vite build",
@@ -9,11 +10,18 @@
     "predev": "convex dev --once"
   },
   "dependencies": {
-    "@faker-js/faker": "^10.0.0",
-    "convex": "1.31.3",
+    "@convex-dev/auth": "^0.0.74",
+    "@auth/core": "^0.36.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "convex": "^1.31.3",
+    "lucide-react": "^0.460.0",
+    "openai": "^4.73.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
-    "prettier": "3.7.4"
+    "react-router-dom": "^7.0.0",
+    "tailwind-merge": "^2.5.0",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/babel__core": "^7.20.0",
@@ -21,6 +29,9 @@
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
     "typescript": "~5.0.3",
     "vite": "^6.4.1",
     "npm-run-all2": "^8.0.0"
