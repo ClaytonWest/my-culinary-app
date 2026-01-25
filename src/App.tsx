@@ -1,74 +1,60 @@
-import { useEffect, useState } from "react";
-import { faker } from "@faker-js/faker";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useConvexAuth } from "convex/react";
+import { AuthPage } from "@/pages/AuthPage";
+import { ChatPage } from "@/pages/ChatPage";
+import { SettingsPage } from "@/pages/SettingsPage";
+import { RecipeBookPage } from "@/pages/RecipeBookPage";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
-// For demo purposes. In a real app, you'd have real user data.
-const NAME = getOrSetFakeName();
+function AuthRedirect() {
+  const { isAuthenticated, isLoading } = useConvexAuth();
 
-export default function App() {
-  const messages = [
-    { _id: "1", user: "Alice", body: "Good morning!" },
-    { _id: "2", user: NAME, body: "Beautiful sunrise today" },
-  ];
-  // TODO: Add mutation hook here.
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
-  const [newMessageText, setNewMessageText] = useState("");
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
 
-  useEffect(() => {
-    // Make sure scrollTo works on button click in Chrome
-    setTimeout(() => {
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-    }, 0);
-  }, [messages]);
-
-  return (
-    <main className="chat">
-      <header>
-        <h1>Culinary GPT</h1>
-        <p>
-          Connected as <strong>{NAME}</strong>
-        </p>
-      </header>
-      {messages?.map((message) => (
-        <article
-          key={message._id}
-          className={message.user === NAME ? "message-mine" : ""}
-        >
-          <div>{message.user}</div>
-
-          <p>{message.body}</p>
-        </article>
-      ))}
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          alert("Mutation not implemented yet");
-          setNewMessageText("");
-        }}
-      >
-        <input
-          value={newMessageText}
-          onChange={async (e) => {
-            const text = e.target.value;
-            setNewMessageText(text);
-          }}
-          placeholder="Write a message…"
-          autoFocus
-        />
-        <button type="submit" disabled={!newMessageText}>
-          Send
-        </button>
-      </form>
-    </main>
-  );
+  return <AuthPage />;
 }
 
-function getOrSetFakeName() {
-  const NAME_KEY = "tutorial_name";
-  const name = sessionStorage.getItem(NAME_KEY);
-  if (!name) {
-    const newName = faker.person.firstName();
-    sessionStorage.setItem(NAME_KEY, newName);
-    return newName;
-  }
-  return name;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/auth" element={<AuthRedirect />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <ChatPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recipes"
+          element={
+            <ProtectedRoute>
+              <RecipeBookPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
