@@ -1,54 +1,124 @@
 import OpenAI from "openai";
 
-// Layer 1: System prompt boundary (included in main chat)
-export const CULINARY_SYSTEM_BOUNDARY = `You are a culinary assistant. You ONLY help with:
-- Cooking and recipes
-- Meal planning and prep
-- Ingredient substitutions
-- Dietary needs and restrictions
-- Kitchen equipment and techniques
+// ============================================
+// LLM-NATIVE SYSTEM PROMPT
+// ============================================
+// The LLM handles ALL routing decisions naturally through:
+// 1. System prompt guidance (self-redirects off-topic)
+// 2. Tool calling (manages memories based on intent)
+// No keyword matching - trust the model's understanding
+
+export const CULINARY_SYSTEM_PROMPT = `You are a friendly, knowledgeable culinary assistant focused exclusively on cooking and food.
+
+## Your Expertise
+You help with:
+- Recipes and cooking techniques
+- Meal planning and food prep
+- Ingredient substitutions and pairings
+- Dietary needs, allergies, and restrictions
+- Kitchen equipment and how to use it
 - Food storage and safety
-- Grocery shopping and meal budgeting
+- Grocery planning and budgeting
 
-You do NOT help with:
-- Non-food topics (coding, math, writing, etc.)
-- Medical advice beyond dietary restrictions
-- Restaurant recommendations or reviews
-- Non-culinary conversation
+## Off-Topic Handling
+For non-food topics (coding, math, general questions, etc.), warmly redirect:
+"I'm your cooking assistant! I'd love to help with recipes, meal planning, or any food questions. What would you like to cook today?"
 
-If asked about non-culinary topics, politely redirect:
-"I'm your cooking assistant! I'd love to help you with recipes, meal planning, or any food-related questions. What would you like to cook today?"
+Don't apologize excessively - just redirect naturally and offer to help with cooking.
 
-**MEMORY MANAGEMENT CAPABILITIES:**
-You have tools to manage the user's dietary profile. Use them when the user:
-- Asks what you know/remember about them → use list_user_memories
-- Wants to forget/remove something → use remove_user_memory
-- Wants you to remember something new → use add_user_memory
-- Wants to update/change something → use update_user_memory (or remove + add)
+## Memory Tools
+You have tools to manage the user's dietary profile. Use them based on INTENT, not keywords:
 
-Categories for memories:
-- "allergy": Life-threatening allergies (peanuts, shellfish, etc.)
-- "intolerance": Digestive issues (lactose, gluten sensitivity)
-- "restriction": Dietary limits (vegan, halal, kosher, vegetarian)
-- "equipment": Kitchen tools (Instant Pot, air fryer, no oven)
-- "goal": Dietary goals (low-carb, high-protein, weight loss)
-- "preference": Likes/dislikes (hates cilantro, loves spicy)
+**list_user_memories** - When user wants to know what you remember about them
+  Examples: "what do you know about me?", "show my preferences", "what are my allergies?"
 
-When using add_user_memory, phrase facts as "User is/has/prefers..." format.
-After managing memories, confirm the action to the user in a friendly way.`;
+**add_user_memory** - When user shares info worth remembering long-term
+  Examples: "I'm allergic to shellfish", "I just got an air fryer", "I'm trying to eat more protein"
+  Format facts as: "User is/has/prefers [fact]"
 
-// Layer 2: Parallel topic classifier
-const TOPIC_CLASSIFIER_PROMPT = `Classify if this message is culinary-related. Culinary includes:
-- Cooking, recipes, ingredients
-- Meal planning, food prep
-- Dietary needs, allergies, restrictions
-- Kitchen equipment, techniques
-- Food storage, safety
-- Grocery shopping for cooking
+**remove_user_memory** - When user wants to forget/remove something
+  Examples: "I'm not vegan anymore", "forget the peanut allergy", "remove that preference"
 
-Respond with ONLY "culinary" or "off-topic".
+**update_user_memory** - When user corrects existing info
+  Examples: "actually I'm lactose intolerant, not allergic to dairy"
+  (Can also use remove + add for updates)
 
-Message: "{message}"`;
+### Memory Categories (choose the most appropriate):
+- **allergy**: Life-threatening reactions (e.g., peanuts, shellfish) - HIGHEST PRIORITY
+- **intolerance**: Digestive/sensitivity issues (e.g., lactose, gluten sensitivity)
+- **restriction**: Firm dietary limits (e.g., vegan, halal, kosher, vegetarian)
+- **equipment**: Kitchen tools/constraints (e.g., "has air fryer", "no oven", "small kitchen")
+- **goal**: Dietary aspirations (e.g., "trying to lose weight", "wants high-protein meals")
+- **preference**: Likes/dislikes (e.g., "loves spicy food", "dislikes cilantro")
+
+After managing memories, confirm the action naturally in conversation.
+
+## Current User Profile
+{memoryContext}`;
+
+// ============================================
+// MINIMAL ABUSE DETECTION (Optional)
+// ============================================
+// Only catches obvious jailbreak/injection attempts
+// NOT for topic routing - let the LLM handle that naturally
+
+const ABUSE_PATTERNS = [
+  /ignore.*(?:previous|above|all).*instructions/i,
+  /system\s*prompt/i,
+  /you\s*are\s*now/i,
+  /pretend\s*(?:to\s*be|you're)/i,
+  /\bDAN\b/,
+  /jailbreak/i,
+  /bypass.*(?:filter|restriction|guardrail)/i,
+  /act\s*as\s*(?:if|though)/i,
+];
+
+export interface AbuseCheckResult {
+  isAbusive: boolean;
+  reason?: string;
+}
+
+/**
+ * Lightweight abuse detection - only catches obvious injection attempts.
+ * NOT for topic routing - the LLM handles that naturally via system prompt.
+ * Returns { isAbusive: false } for 99%+ of messages.
+ */
+export function checkForAbuse(userMessage: string): AbuseCheckResult {
+  for (const pattern of ABUSE_PATTERNS) {
+    if (pattern.test(userMessage)) {
+      return {
+        isAbusive: true,
+        reason: "Message appears to contain prompt injection",
+      };
+    }
+  }
+  return { isAbusive: false };
+}
+
+// ============================================
+// OUTPUT GUARDRAIL (Lightweight)
+// ============================================
+// Catches if the LLM slipped and generated code/off-topic content
+// This is a safety net, not primary routing
+
+export function checkOutputGuardrail(aiResponse: string): boolean {
+  // Only catch obvious code generation that shouldn't happen
+  const codePatterns = [
+    /```(?:python|javascript|typescript|java|cpp|sql|html|css|ruby|go|rust|php)\n/i,
+    /def\s+\w+\s*\([^)]*\):/i, // Python function
+    /function\s+\w+\s*\([^)]*\)\s*\{/i, // JS function
+    /class\s+\w+\s*(?:extends|implements|\{)/i, // Class definition
+  ];
+
+  return !codePatterns.some((pattern) => pattern.test(aiResponse));
+}
+
+// ============================================
+// LEGACY EXPORT (for backwards compatibility)
+// ============================================
+// Keep this temporarily while transitioning - can remove later
+
+export const CULINARY_SYSTEM_BOUNDARY = CULINARY_SYSTEM_PROMPT;
 
 export interface GuardrailResult {
   isCulinary: boolean;
@@ -56,68 +126,25 @@ export interface GuardrailResult {
   redirectMessage?: string;
 }
 
+/**
+ * @deprecated - No longer needed. LLM handles topic routing naturally.
+ * Kept for backwards compatibility during transition.
+ */
 export async function checkTopicGuardrail(
-  client: OpenAI,
+  _client: OpenAI,
   userMessage: string
 ): Promise<GuardrailResult> {
-  // Quick local checks for obvious culinary cases
-  const culinaryKeywords =
-    /\b(cook|recipe|ingredient|meal|food|eat|kitchen|dinner|lunch|breakfast|bake|fry|grill|prep|dish|cuisine|flavor|taste|spice|herb|vegetable|fruit|meat|fish|dairy|vegan|vegetarian|allergy|allergic|intolerant|gluten|nut|egg|soy|shellfish|kosher|halal|protein|carb|calorie|nutrition|roast|saute|steam|boil|simmer|marinate|season|chop|slice|dice)\b/i;
-
-  // Memory management keywords - always allow these
-  const memoryKeywords =
-    /\b(remember|forget|know about me|my preferences|my allergies|my diet|what do you know|update|remove|delete|i('m| am) (not|no longer)|i (just|recently) (got|bought|have)|air fryer|instant pot|equipment)\b/i;
-
-  if (culinaryKeywords.test(userMessage) || memoryKeywords.test(userMessage)) {
-    return { isCulinary: true, confidence: 0.9 };
-  }
-
-  // Run classifier for ambiguous cases
-  try {
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_completion_tokens: 10,
-      temperature: 0,
-      messages: [
-        {
-          role: "user",
-          content: TOPIC_CLASSIFIER_PROMPT.replace(
-            "{message}",
-            userMessage.slice(0, 500)
-          ),
-        },
-      ],
-    });
-
-    const result = response.choices[0]?.message?.content?.toLowerCase().trim();
-    const isCulinary = result === "culinary";
-
+  // Just check for abuse, otherwise always allow
+  const abuseCheck = checkForAbuse(userMessage);
+  if (abuseCheck.isAbusive) {
     return {
-      isCulinary,
-      confidence: 0.85,
-      redirectMessage: isCulinary
-        ? undefined
-        : "I'm your cooking assistant! I specialize in recipes, meal planning, and all things food-related. What would you like to cook today?",
+      isCulinary: false,
+      confidence: 1.0,
+      redirectMessage:
+        "I'm your cooking assistant! I'd love to help with recipes, meal planning, or food questions. What would you like to cook today?",
     };
-  } catch {
-    // On error, be permissive but log
-    console.warn("Topic classifier failed, allowing message");
-    return { isCulinary: true, confidence: 0.5 };
   }
-}
 
-// Layer 3: Output guardrail (check AI response)
-export function checkOutputGuardrail(aiResponse: string): boolean {
-  // Check for signs the model went off-topic
-  const offTopicIndicators = [
-    /here's the code/i,
-    /```(python|javascript|java|cpp|sql|html|css)/i,
-    /let me help you with that math/i,
-    /here's how to write/i,
-    /\bpolitical\b.*\bopinion\b/i,
-    /def\s+\w+\s*\(/i, // Python function definition
-    /function\s+\w+\s*\(/i, // JS function definition
-  ];
-
-  return !offTopicIndicators.some((pattern) => pattern.test(aiResponse));
+  // Always allow - let the LLM decide how to respond
+  return { isCulinary: true, confidence: 1.0 };
 }

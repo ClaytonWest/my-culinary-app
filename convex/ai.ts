@@ -4,9 +4,9 @@ import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import OpenAI from "openai";
 import {
-  checkTopicGuardrail,
+  checkForAbuse,
   checkOutputGuardrail,
-  CULINARY_SYSTEM_BOUNDARY,
+  CULINARY_SYSTEM_PROMPT,
 } from "./lib/topicGuardrails";
 import {
   RECIPE_GENERATION_PROMPT,
@@ -192,17 +192,16 @@ export const chat = action({
       }
     }
 
-    // Layer 2: Topic guardrail check (skip for image messages - they're culinary by nature)
-    if (!userMessage.imageStorageId) {
-      const guardrail = await checkTopicGuardrail(client, userMessage.content);
-      if (!guardrail.isCulinary) {
-        await ctx.runMutation(internal.messages.createAssistantMessage, {
-          conversationId: args.conversationId,
-          userId,
-          content: guardrail.redirectMessage!,
-        });
-        return { success: true, offTopic: true };
-      }
+    // Minimal abuse check (jailbreak attempts only) - LLM handles topic routing naturally
+    const abuseCheck = checkForAbuse(userMessage.content);
+    if (abuseCheck.isAbusive) {
+      await ctx.runMutation(internal.messages.createAssistantMessage, {
+        conversationId: args.conversationId,
+        userId,
+        content:
+          "I'm your cooking assistant! I'd love to help with recipes, meal planning, or food questions. What would you like to cook today?",
+      });
+      return { success: true, offTopic: true };
     }
 
     // Get conversation history
@@ -217,12 +216,10 @@ export const chat = action({
       { userId }
     );
 
-    // Build system prompt with memory context
-    const systemPrompt = `${CULINARY_SYSTEM_BOUNDARY}
+    // Build system prompt with memory context injected
+    const systemPrompt = `${CULINARY_SYSTEM_PROMPT.replace("{memoryContext}", memoryContext || "No dietary profile stored yet.")}
 
-${RECIPE_GENERATION_PROMPT}
-
-${memoryContext}`;
+${RECIPE_GENERATION_PROMPT}`;
 
     // Build messages for GPT (include image analysis context in history)
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
