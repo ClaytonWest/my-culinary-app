@@ -62,14 +62,14 @@ export const runCompaction = action({
       }
     );
 
-    const existingFacts = existingMemories.map((m) => m.fact);
+    const existingFacts = existingMemories.map((m: any) => m.fact);
 
     // Run compaction with OpenAI
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
     const result = await compactMemories(
       client,
-      messages.map((m) => ({ role: m.role, content: m.content })),
+      messages.map((m: any) => ({ role: m.role, content: m.content })),
       existingFacts
     );
 
@@ -129,8 +129,8 @@ export const maybeRunCompaction = internalAction({
 
         const result = await compactMemories(
           client,
-          messages.map((m) => ({ role: m.role, content: m.content })),
-          existingMemories.map((m) => m.fact)
+          messages.map((m: any) => ({ role: m.role, content: m.content })),
+          existingMemories.map((m: any) => m.fact)
         );
 
         if (result.memories.length > 0) {
@@ -148,5 +148,83 @@ export const maybeRunCompaction = internalAction({
         console.error("Memory compaction error:", error);
       }
     }
+  },
+});
+
+// Debug action to manually check and trigger compaction
+export const debugCompaction = action({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthorized");
+
+    // Get conversation details
+    const conversation: any = await ctx.runQuery(internal.conversations.getInternal, {
+      conversationId: args.conversationId,
+    });
+
+    if (!conversation) throw new Error("Conversation not found");
+
+    // Check if should run
+    const shouldRun = await ctx.runQuery(
+      internal.memoryCompaction.shouldRunCompaction,
+      { conversationId: args.conversationId }
+    );
+
+    // Get messages count
+    const messages = await ctx.runQuery(internal.messages.getRecentInternal, {
+      conversationId: args.conversationId,
+      limit: 50,
+    });
+
+    // Get existing memories
+    const existingMemories = await ctx.runQuery(
+      internal.memories.getMemoriesInternal,
+      { userId }
+    );
+
+    const debug: any = {
+      conversationId: args.conversationId,
+      messageCount: conversation.messageCount,
+      actualMessages: messages.length,
+      lastCompactionAt: conversation.lastCompactionAt,
+      createdAt: conversation.createdAt,
+      shouldRunCompaction: shouldRun,
+      existingMemoriesCount: existingMemories.length,
+      threshold: MESSAGE_THRESHOLD,
+    };
+
+    // Force run compaction
+    if (messages.length > 0) {
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+
+      const result = await compactMemories(
+        client,
+        messages.map((m: any) => ({ role: m.role, content: m.content })),
+        existingMemories.map((m: any) => m.fact)
+      );
+
+      if (result.memories.length > 0) {
+        await ctx.runMutation(internal.memories.addMemories, {
+          userId,
+          memories: result.memories,
+          sourceConversationId: args.conversationId,
+        });
+      }
+
+      await ctx.runMutation(internal.memoryCompaction.markCompactionRun, {
+        conversationId: args.conversationId,
+      });
+
+      return {
+        debug,
+        compactionResult: {
+          newMemories: result.memories.length,
+          memories: result.memories,
+        },
+      };
+    }
+
+    return { debug, compactionResult: null };
   },
 });

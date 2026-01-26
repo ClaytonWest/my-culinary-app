@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalQuery } from "./_generated/server";
 import { requireAuth, requireOwnership } from "./lib/auth";
 
 export const list = query({
@@ -109,5 +109,13 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(args.id);
+  },
+});
+
+// Internal query for memory compaction debugging
+export const getInternal = internalQuery({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.conversationId);
   },
 });

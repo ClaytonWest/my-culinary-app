@@ -239,3 +239,219 @@ export const addMemoryManual = mutation({
     });
   },
 });
+
+// ============================================
+// TOOL-USE MUTATIONS (for LLM function calling)
+// ============================================
+
+// List all memories for a user (internal, for tool use)
+export const listMemoriesForTool = internalQuery({
+  args: {
+    userId: v.id("users"),
+    category: v.optional(memoryCategory),
+  },
+  handler: async (ctx, args) => {
+    let memories;
+
+    if (args.category) {
+      memories = await ctx.db
+        .query("userMemories")
+        .withIndex("by_userId_category", (q) =>
+          q.eq("userId", args.userId).eq("category", args.category!)
+        )
+        .collect();
+    } else {
+      memories = await ctx.db
+        .query("userMemories")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .collect();
+    }
+
+    // Return formatted for LLM consumption
+    return memories.map((m) => ({
+      id: m._id,
+      fact: m.fact,
+      category: m.category,
+      extractedAt: m.extractedAt,
+    }));
+  },
+});
+
+// Remove memory by fuzzy search (internal, for tool use)
+export const removeBySearch = internalMutation({
+  args: {
+    userId: v.id("users"),
+    searchTerm: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const searchLower = args.searchTerm.toLowerCase();
+
+    // Get all user memories
+    const memories = await ctx.db
+      .query("userMemories")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    // Fuzzy match - find memories where the fact contains the search term
+    const matches = memories.filter((m) =>
+      m.fact.toLowerCase().includes(searchLower) ||
+      searchLower.includes(m.fact.toLowerCase().split(" ")[0]) // Match first word
+    );
+
+    if (matches.length === 0) {
+      return {
+        success: false,
+        message: `No memories found matching "${args.searchTerm}"`,
+        deletedCount: 0,
+        deletedFacts: [],
+      };
+    }
+
+    // Delete all matches
+    const deletedFacts: string[] = [];
+    for (const memory of matches) {
+      await ctx.db.delete(memory._id);
+      deletedFacts.push(memory.fact);
+    }
+
+    return {
+      success: true,
+      message: `Deleted ${matches.length} memory(s) matching "${args.searchTerm}"`,
+      deletedCount: matches.length,
+      deletedFacts,
+    };
+  },
+});
+
+// Remove memory by ID (internal, for tool use)
+export const removeById = internalMutation({
+  args: {
+    userId: v.id("users"),
+    memoryId: v.id("userMemories"),
+  },
+  handler: async (ctx, args) => {
+    const memory = await ctx.db.get(args.memoryId);
+
+    if (!memory) {
+      return { success: false, message: "Memory not found" };
+    }
+
+    if (memory.userId !== args.userId) {
+      return { success: false, message: "Memory not found" };
+    }
+
+    await ctx.db.delete(args.memoryId);
+    return {
+      success: true,
+      message: `Deleted memory: "${memory.fact}"`,
+      deletedFact: memory.fact,
+    };
+  },
+});
+
+// Add memory with duplicate checking (internal, for tool use)
+export const addMemoryForTool = internalMutation({
+  args: {
+    userId: v.id("users"),
+    fact: v.string(),
+    category: memoryCategory,
+    sourceConversationId: v.optional(v.id("conversations")),
+  },
+  handler: async (ctx, args) => {
+    const factLower = args.fact.toLowerCase();
+
+    // Check for similar existing memories
+    const existing = await ctx.db
+      .query("userMemories")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    // Check for duplicates (exact or very similar)
+    const duplicate = existing.find((m) => {
+      const existingLower = m.fact.toLowerCase();
+      return (
+        existingLower === factLower ||
+        existingLower.includes(factLower) ||
+        factLower.includes(existingLower)
+      );
+    });
+
+    if (duplicate) {
+      return {
+        success: false,
+        message: `Similar memory already exists: "${duplicate.fact}"`,
+        isDuplicate: true,
+        existingFact: duplicate.fact,
+      };
+    }
+
+    // Insert new memory
+    const id = await ctx.db.insert("userMemories", {
+      userId: args.userId,
+      fact: args.fact.slice(0, 500),
+      category: args.category,
+      confidence: "high",
+      extractedAt: Date.now(),
+      sourceConversationId: args.sourceConversationId,
+    });
+
+    return {
+      success: true,
+      message: `Remembered: "${args.fact}" (${args.category})`,
+      memoryId: id,
+      isDuplicate: false,
+    };
+  },
+});
+
+// Update existing memory (internal, for tool use)
+export const updateMemoryForTool = internalMutation({
+  args: {
+    userId: v.id("users"),
+    searchTerm: v.string(),
+    newFact: v.optional(v.string()),
+    newCategory: v.optional(memoryCategory),
+  },
+  handler: async (ctx, args) => {
+    const searchLower = args.searchTerm.toLowerCase();
+
+    // Find matching memory
+    const memories = await ctx.db
+      .query("userMemories")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    const match = memories.find((m) =>
+      m.fact.toLowerCase().includes(searchLower)
+    );
+
+    if (!match) {
+      return {
+        success: false,
+        message: `No memory found matching "${args.searchTerm}"`,
+      };
+    }
+
+    // Update the memory
+    const updates: Record<string, any> = {};
+    if (args.newFact) updates.fact = args.newFact.slice(0, 500);
+    if (args.newCategory) updates.category = args.newCategory;
+
+    if (Object.keys(updates).length === 0) {
+      return {
+        success: false,
+        message: "No updates provided",
+      };
+    }
+
+    await ctx.db.patch(match._id, updates);
+
+    return {
+      success: true,
+      message: `Updated memory from "${match.fact}" to "${args.newFact || match.fact}" (${args.newCategory || match.category})`,
+      oldFact: match.fact,
+      newFact: args.newFact || match.fact,
+      category: args.newCategory || match.category,
+    };
+  },
+});
