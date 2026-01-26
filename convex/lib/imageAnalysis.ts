@@ -45,7 +45,7 @@ export async function analyzeIngredientImage(
   ];
 
   const response = await client.chat.completions.create({
-    model: "gpt-5.2",
+    model: "gpt-4o",
     max_completion_tokens: 1024,
     messages,
   });

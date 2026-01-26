@@ -81,7 +81,7 @@ export async function compactMemories(
       : "None yet";
 
   const response = await client.chat.completions.create({
-    model: "gpt-5.2-mini",
+    model: "gpt-4o-mini",
     max_completion_tokens: 2048,
     temperature: 0,
     messages: [
