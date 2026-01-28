@@ -17,6 +17,7 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as lib_errors from "../lib/errors.js";
 import type * as lib_imageAnalysis from "../lib/imageAnalysis.js";
 import type * as lib_memoryCompaction from "../lib/memoryCompaction.js";
+import type * as lib_memorySanitization from "../lib/memorySanitization.js";
 import type * as lib_recipeGeneration from "../lib/recipeGeneration.js";
 import type * as lib_topicGuardrails from "../lib/topicGuardrails.js";
 import type * as lib_validators from "../lib/validators.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   "lib/errors": typeof lib_errors;
   "lib/imageAnalysis": typeof lib_imageAnalysis;
   "lib/memoryCompaction": typeof lib_memoryCompaction;
+  "lib/memorySanitization": typeof lib_memorySanitization;
   "lib/recipeGeneration": typeof lib_recipeGeneration;
   "lib/topicGuardrails": typeof lib_topicGuardrails;
   "lib/validators": typeof lib_validators;
