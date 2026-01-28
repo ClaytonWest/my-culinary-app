@@ -270,11 +270,11 @@ ${RECIPE_GENERATION_PROMPT}`;
         const toolCalls = assistantMessage.tool_calls!;
         for (const toolCall of toolCalls) {
           const functionName = toolCall.function.name;
-          const functionArgs = JSON.parse(toolCall.function.arguments);
-
           let toolResult: any;
 
           try {
+            const functionArgs = JSON.parse(toolCall.function.arguments);
+
             switch (functionName) {
               case "list_user_memories": {
                 const memories = await ctx.runQuery(
