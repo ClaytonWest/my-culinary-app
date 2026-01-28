@@ -13,7 +13,6 @@ import {
   extractRecipeJson,
 } from "./lib/recipeGeneration";
 import { analyzeIngredientImage } from "./lib/imageAnalysis";
-import { Id } from "./_generated/dataModel";
 
 // ============================================
 // MEMORY MANAGEMENT TOOLS FOR FUNCTION CALLING
@@ -397,11 +396,12 @@ ${RECIPE_GENERATION_PROMPT}`;
     });
 
     // Trigger memory compaction in background (don't await)
-    void ctx
-      .runAction(internal.memoryCompaction.maybeRunCompaction, {
-        conversationId: args.conversationId,
-      })
-      .catch((err) => console.error("Memory compaction error:", err));
+    // Fire and forget - Convex will schedule this to run
+    ctx.runAction(internal.memoryCompaction.maybeRunCompaction, {
+      conversationId: args.conversationId,
+    }).catch(() => {
+      // Silently ignore failures - compaction is not critical
+    });
 
     return { success: true, offTopic: false, toolCallsUsed: toolCallsCount };
   },
