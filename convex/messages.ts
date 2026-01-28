@@ -5,7 +5,7 @@ import {
   internalQuery,
   internalMutation,
 } from "./_generated/server";
-import { requireAuth, requireOwnership } from "./lib/auth";
+import { requireAuth, requireOwnership, verifyFileOwnership } from "./lib/auth";
 import { Id } from "./_generated/dataModel";
 import { validatePrompt } from "./lib/validators";
 
@@ -51,6 +51,11 @@ export const send = mutation({
       throw new Error("Conversation not found");
     }
     requireOwnership(conversation.userId, userId);
+
+    // Verify image ownership if provided
+    if (args.imageStorageId) {
+      await verifyFileOwnership(ctx, args.imageStorageId, userId);
+    }
 
     // Validate content
     const validatedContent = validatePrompt(args.content);

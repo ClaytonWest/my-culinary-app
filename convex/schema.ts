@@ -64,6 +64,15 @@ export default defineSchema({
     .index("by_conversationId", ["conversationId"])
     .index("by_userId", ["userId"]),
 
+  // Uploaded files ownership tracking
+  uploadedFiles: defineTable({
+    storageId: v.id("_storage"),
+    userId: v.id("users"),
+    uploadedAt: v.number(),
+  })
+    .index("by_storageId", ["storageId"])
+    .index("by_userId", ["userId"]),
+
   // Saved recipes
   recipes: defineTable({
     userId: v.id("users"),
