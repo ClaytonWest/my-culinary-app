@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { requireAuth, requireOwnership } from "./lib/auth";
+import { RecipeInputSchema } from "./lib/validators";
 
 export const list = query({
   args: {
@@ -88,6 +89,18 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await requireAuth(ctx);
+
+    RecipeInputSchema.parse({
+      title: args.title,
+      description: args.description,
+      ingredients: args.ingredients,
+      instructions: args.instructions,
+      servings: args.servings,
+      prepTime: args.prepTime,
+      cookTime: args.cookTime,
+      dietaryTags: args.dietaryTags,
+    });
+
     const now = Date.now();
 
     return await ctx.db.insert("recipes", {
@@ -136,6 +149,17 @@ export const createInternal = internalMutation({
     sourceConversationId: v.optional(v.id("conversations")),
   },
   handler: async (ctx, args) => {
+    RecipeInputSchema.parse({
+      title: args.title,
+      description: args.description,
+      ingredients: args.ingredients,
+      instructions: args.instructions,
+      servings: args.servings,
+      prepTime: args.prepTime,
+      cookTime: args.cookTime,
+      dietaryTags: args.dietaryTags,
+    });
+
     const now = Date.now();
     return await ctx.db.insert("recipes", {
       ...args,
@@ -177,6 +201,17 @@ export const update = mutation({
     }
 
     requireOwnership(recipe.userId, userId);
+
+    RecipeInputSchema.partial().parse({
+      ...(args.title !== undefined && { title: args.title }),
+      ...(args.description !== undefined && { description: args.description }),
+      ...(args.ingredients !== undefined && { ingredients: args.ingredients }),
+      ...(args.instructions !== undefined && { instructions: args.instructions }),
+      ...(args.servings !== undefined && { servings: args.servings }),
+      ...(args.prepTime !== undefined && { prepTime: args.prepTime }),
+      ...(args.cookTime !== undefined && { cookTime: args.cookTime }),
+      ...(args.dietaryTags !== undefined && { dietaryTags: args.dietaryTags }),
+    });
 
     // Update recipe
     const updates: Record<string, unknown> = {
