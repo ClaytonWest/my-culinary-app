@@ -25,7 +25,7 @@ export const registerUpload = mutation({
       throw new Error("Invalid storage ID");
     }
 
-    // Check if already registered (prevent duplicate entries)
+    // Check if already registered
     const existing = await ctx.db
       .query("uploadedFiles")
       .withIndex("by_storageId", (q) => q.eq("storageId", args.storageId))
@@ -40,11 +40,38 @@ export const registerUpload = mutation({
     }
 
     // Register the upload
-    await ctx.db.insert("uploadedFiles", {
+    const recordId = await ctx.db.insert("uploadedFiles", {
       storageId: args.storageId,
       userId,
       uploadedAt: Date.now(),
     });
+
+    // RACE CONDITION FIX: Verify no duplicate was created
+    const allRecords = await ctx.db
+      .query("uploadedFiles")
+      .withIndex("by_storageId", (q) => q.eq("storageId", args.storageId))
+      .collect();
+
+    if (allRecords.length > 1) {
+      // Duplicates exist - keep earliest, delete others
+      const sorted = allRecords.sort((a, b) => a.uploadedAt - b.uploadedAt);
+      const keeper = sorted[0];
+
+      // If we're not the keeper, delete our record
+      if (keeper._id !== recordId) {
+        await ctx.db.delete(recordId);
+
+        // Verify the keeper belongs to us, otherwise reject
+        if (keeper.userId !== userId) {
+          throw new Error("File belongs to another user");
+        }
+      } else {
+        // We're the keeper - delete the duplicates
+        for (const record of sorted.slice(1)) {
+          await ctx.db.delete(record._id);
+        }
+      }
+    }
 
     return args.storageId;
   },

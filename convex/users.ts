@@ -81,6 +81,7 @@ export const checkRateLimit = mutation({
 
     const now = Date.now();
     const dayInMs = 24 * 60 * 60 * 1000;
+    const limit = profile.subscriptionTier === "premium" ? 1000 : 50;
 
     // Reset if new day
     if (profile.lastRequestReset < now - dayInMs) {
@@ -88,26 +89,21 @@ export const checkRateLimit = mutation({
         dailyRequestCount: 1,
         lastRequestReset: now,
       });
-      return {
-        allowed: true,
-        remaining: profile.subscriptionTier === "premium" ? 999 : 49,
-      };
+      return { allowed: true, remaining: limit - 1 };
     }
 
-    const limit = profile.subscriptionTier === "premium" ? 1000 : 50;
+    // Increment FIRST (atomic with transaction)
+    const newCount = profile.dailyRequestCount + 1;
+    await ctx.db.patch(profile._id, { dailyRequestCount: newCount });
 
-    if (profile.dailyRequestCount >= limit) {
+    // THEN check if over limit
+    if (newCount > limit) {
+      // Over limit - decrement back and reject
+      await ctx.db.patch(profile._id, { dailyRequestCount: newCount - 1 });
       return { allowed: false, remaining: 0 };
     }
 
-    await ctx.db.patch(profile._id, {
-      dailyRequestCount: profile.dailyRequestCount + 1,
-    });
-
-    return {
-      allowed: true,
-      remaining: limit - profile.dailyRequestCount - 1,
-    };
+    return { allowed: true, remaining: limit - newCount };
   },
 });
 
