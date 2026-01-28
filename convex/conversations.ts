@@ -105,6 +105,20 @@ export const remove = mutation({
       .collect();
 
     for (const message of messages) {
+      // Delete storage file if message has an image
+      if (message.imageStorageId) {
+        await ctx.storage.delete(message.imageStorageId);
+
+        // Delete the uploadedFiles ownership record
+        const uploadRecord = await ctx.db
+          .query("uploadedFiles")
+          .withIndex("by_storageId", (q) => q.eq("storageId", message.imageStorageId))
+          .first();
+        if (uploadRecord) {
+          await ctx.db.delete(uploadRecord._id);
+        }
+      }
+
       await ctx.db.delete(message._id);
     }
 
