@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import { Doc } from "../../../convex/_generated/dataModel";
-import { cn } from "@/lib/utils";
-import { Bot, User } from "lucide-react";
-import { RecipeCard } from "./RecipeCard";
+import { ChefHat } from "lucide-react";
+import { ChatBubble } from "./ChatBubble";
+import { TypingIndicator } from "./TypingIndicator";
 
 interface MessageListProps {
   messages: Doc<"messages">[];
@@ -18,11 +18,13 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
 
   if (messages.length === 0 && !isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+      <div className="flex-1 flex items-center justify-center text-muted-foreground px-4">
         <div className="text-center">
-          <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>Start a conversation!</p>
-          <p className="text-sm mt-2">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
+            <ChefHat className="h-6 w-6 text-primary" />
+          </div>
+          <p className="font-medium">Start a conversation!</p>
+          <p className="text-sm mt-2 max-w-sm">
             Ask me about recipes, cooking tips, or upload a photo of ingredients.
           </p>
         </div>
@@ -31,67 +33,16 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div
+      className="flex-1 overflow-y-auto p-4 space-y-4"
+      role="log"
+      aria-live="polite"
+      aria-label="Chat messages"
+    >
       {messages.map((message) => (
-        <div
-          key={message._id}
-          className={cn(
-            "flex gap-3 max-w-3xl",
-            message.role === "user" ? "ml-auto flex-row-reverse" : ""
-          )}
-        >
-          <div
-            className={cn(
-              "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
-              message.role === "user"
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted"
-            )}
-          >
-            {message.role === "user" ? (
-              <User className="h-4 w-4" />
-            ) : (
-              <Bot className="h-4 w-4" />
-            )}
-          </div>
-          <div className="max-w-[80%]">
-            <div
-              className={cn(
-                "rounded-lg px-4 py-2",
-                message.role === "user"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted"
-              )}
-            >
-              <p className="whitespace-pre-wrap">{message.content}</p>
-              {message.imageStorageId && (
-                <p className="text-xs mt-2 opacity-70">[Image attached]</p>
-              )}
-            </div>
-            {message.recipeJson && (
-              <RecipeCard
-                recipeJson={message.recipeJson}
-                conversationId={message.conversationId}
-                messageId={message._id}
-              />
-            )}
-          </div>
-        </div>
+        <ChatBubble key={message._id} message={message} />
       ))}
-      {isLoading && (
-        <div className="flex gap-3 max-w-3xl">
-          <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-muted">
-            <Bot className="h-4 w-4" />
-          </div>
-          <div className="bg-muted rounded-lg px-4 py-2">
-            <div className="flex gap-1">
-              <span className="w-2 h-2 bg-foreground/50 rounded-full animate-bounce" />
-              <span className="w-2 h-2 bg-foreground/50 rounded-full animate-bounce [animation-delay:0.1s]" />
-              <span className="w-2 h-2 bg-foreground/50 rounded-full animate-bounce [animation-delay:0.2s]" />
-            </div>
-          </div>
-        </div>
-      )}
+      {isLoading && messages.length > 0 && <TypingIndicator />}
       <div ref={bottomRef} />
     </div>
   );

@@ -43,10 +43,24 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
       },
+      spacing: {
+        sidebar: "var(--sidebar-width-expanded)",
+        "sidebar-collapsed": "var(--sidebar-width-collapsed)",
+        header: "var(--header-height)",
+        "header-collapsed": "var(--header-height-collapsed)",
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        pill: "var(--input-pill-radius)",
+        bubble: "var(--bubble-radius)",
+      },
+      maxWidth: {
+        chat: "var(--content-max-width)",
+      },
+      backdropBlur: {
+        glass: "12px",
       },
     },
   },
