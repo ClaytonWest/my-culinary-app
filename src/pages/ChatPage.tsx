@@ -9,7 +9,6 @@ import { MobileDrawer } from "@/components/layout/MobileDrawer";
 
 export function ChatPage() {
   const ensureProfile = useMutation(api.users.ensureProfile);
-  const createConversation = useMutation(api.conversations.create);
 
   const [selectedConversationId, setSelectedConversationId] =
     useState<Id<"conversations"> | null>(null);
@@ -18,9 +17,10 @@ export function ChatPage() {
     ensureProfile().catch(console.error);
   }, [ensureProfile]);
 
-  const handleNewConversation = async () => {
-    const id = await createConversation({});
-    setSelectedConversationId(id);
+  const handleNewConversation = () => {
+    // Just reset to the welcome screen — a conversation will be
+    // created when the user actually sends their first message.
+    setSelectedConversationId(null);
   };
 
   return (
@@ -50,7 +50,7 @@ export function ChatPage() {
         <ChatWindow
           conversationId={selectedConversationId}
           onMessageSent={() => {}}
-          onNewConversation={handleNewConversation}
+          onConversationCreated={setSelectedConversationId}
         />
       </main>
     </div>

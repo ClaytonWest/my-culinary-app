@@ -10,13 +10,13 @@ import { useToast } from "@/components/common/Toast";
 interface ChatWindowProps {
   conversationId: Id<"conversations"> | null;
   onMessageSent?: () => void;
-  onNewConversation?: () => Promise<void>;
+  onConversationCreated?: (id: Id<"conversations">) => void;
 }
 
 export function ChatWindow({
   conversationId,
   onMessageSent,
-  onNewConversation,
+  onConversationCreated,
 }: ChatWindowProps) {
   const [isAiResponding, setIsAiResponding] = useState(false);
   const { showToast } = useToast();
@@ -35,7 +35,7 @@ export function ChatWindow({
     try {
       if (!activeConversationId) {
         activeConversationId = await createConversation({});
-        onNewConversation?.();
+        onConversationCreated?.(activeConversationId);
       }
 
       const messageId = await sendMessage({
