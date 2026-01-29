@@ -3,6 +3,7 @@ import { Doc } from "../../../convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
 import { Bot, User } from "lucide-react";
 import { RecipeCard } from "./RecipeCard";
+import ReactMarkdown from "react-markdown";
 
 interface MessageListProps {
   messages: Doc<"messages">[];
@@ -63,7 +64,13 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
                   : "bg-muted"
               )}
             >
-              <p className="whitespace-pre-wrap">{message.content}</p>
+              {message.role === "assistant" ? (
+                <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5">
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                </div>
+              ) : (
+                <p className="whitespace-pre-wrap">{message.content}</p>
+              )}
               {message.imageStorageId && (
                 <p className="text-xs mt-2 opacity-70">[Image attached]</p>
               )}
