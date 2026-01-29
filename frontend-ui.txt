@@ -1,0 +1,289 @@
+Culinary AI UI Revamp - Implementation Plan                                               
+                                                                                           
+ Overview                                                                                  
+                                                                                           
+ Redesign the frontend to a "Minimal Rail" Gemini-style layout with Soft Sage color        
+ palette, ambient video header, and modernized chat components.                            
+                                                                                           
+ Key User Refinements:                                                                     
+ - Recipe Book prominent in sidebar (frequent visit)                                       
+ - Settings/Logout in user avatar popup (ChatGPT-style)                                    
+ - Mobile suggestions as stacked pills (Gemini-style)                                      
+                                                                                           
+ ---                                                                                       
+ Phase 1: Design Tokens & Foundation                                                       
+                                                                                           
+ Files to Modify                                                                           
+                                                                                           
+ - src/index.css - New color palette + layout variables                                    
+ - tailwind.config.ts - Extended theme values                                              
+                                                                                           
+ CSS Variables to Add                                                                      
+                                                                                           
+ :root {                                                                                   
+   /* Soft Sage Palette */                                                                 
+   --primary: 142 35% 45%;           /* Sage green */                                      
+   --background: 48 33% 97%;          /* Warm white */                                     
+   --accent: 25 50% 93%;              /* Light terracotta */                               
+                                                                                           
+   /* Layout Tokens */                                                                     
+   --header-height: 120px;                                                                 
+   --header-height-collapsed: 48px;                                                        
+   --sidebar-width-expanded: 280px;                                                        
+   --sidebar-width-collapsed: 56px;                                                        
+   --input-pill-radius: 28px;                                                              
+   --bubble-radius: 20px;                                                                  
+   --content-max-width: 720px;                                                             
+ }                                                                                         
+                                                                                           
+ .dark {                                                                                   
+   --primary: 142 40% 55%;                                                                 
+   --background: 142 15% 8%;                                                               
+   /* ... dark variants */                                                                 
+ }                                                                                         
+                                                                                           
+ Tailwind Extensions                                                                       
+                                                                                           
+ - spacing.sidebar, spacing.header                                                         
+ - borderRadius.pill, borderRadius.bubble                                                  
+ - maxWidth.chat                                                                           
+ - backdropBlur.glass                                                                      
+                                                                                           
+ ---                                                                                       
+ Phase 2: Providers & Hooks                                                                
+                                                                                           
+ New Files to Create                                                                       
+ ┌───────────────────────────────────┬───────────────────────────────────┐                 
+ │               File                │              Purpose              │                 
+ ├───────────────────────────────────┼───────────────────────────────────┤                 
+ │ src/providers/ThemeProvider.tsx   │ Dark/light mode with localStorage │                 
+ ├───────────────────────────────────┼───────────────────────────────────┤                 
+ │ src/providers/MotionProvider.tsx  │ prefers-reduced-motion detection  │                 
+ ├───────────────────────────────────┼───────────────────────────────────┤                 
+ │ src/providers/SidebarProvider.tsx │ Sidebar expand/collapse state     │                 
+ ├───────────────────────────────────┼───────────────────────────────────┤                 
+ │ src/hooks/useTheme.ts             │ Theme context hook                │                 
+ ├───────────────────────────────────┼───────────────────────────────────┤                 
+ │ src/hooks/useReducedMotion.ts     │ Motion preference hook            │                 
+ ├───────────────────────────────────┼───────────────────────────────────┤                 
+ │ src/hooks/useMediaQuery.ts        │ Responsive breakpoint hook        │                 
+ ├───────────────────────────────────┼───────────────────────────────────┤                 
+ │ src/hooks/useSidebar.ts           │ Sidebar state hook                │                 
+ └───────────────────────────────────┴───────────────────────────────────┘                 
+ Modify src/main.tsx                                                                       
+                                                                                           
+ Wrap app in new providers:                                                                
+ <ThemeProvider>                                                                           
+   <MotionProvider>                                                                        
+     <SidebarProvider>                                                                     
+       <App />                                                                             
+     </SidebarProvider>                                                                    
+   </MotionProvider>                                                                       
+ </ThemeProvider>                                                                          
+                                                                                           
+ ---                                                                                       
+ Phase 3: SlimRail Sidebar                                                                 
+                                                                                           
+ New Files to Create                                                                       
+                                                                                           
+ - src/components/layout/SlimRail.tsx                                                      
+ - src/components/layout/SlimRailNavItem.tsx                                               
+ - src/components/layout/UserProfilePopup.tsx                                              
+ - src/components/layout/MobileDrawer.tsx                                                  
+ - src/components/layout/MobileHeader.tsx                                                  
+                                                                                           
+ SlimRail Structure                                                                        
+                                                                                           
+ ┌──────────────────────────┐                                                              
+ │ [Logo]        [Toggle]   │                                                              
+ ├──────────────────────────┤                                                              
+ │ + New Chat               │                                                              
+ │ 🔍 Search                │                                                              
+ ├──────────────────────────┤                                                              
+ │ 📖 Recipe Book  ← PROMINENT                                                             
+ │                                                                            
+ ├──────────────────────────┤                                                              
+ │ Your Chats               │                                                              
+ │ • Conversation list...   │                                                              
+ ├──────────────────────────┤                                                              
+ │ ○ User Avatar → POPUP    │                                                              
+ └──────────────────────────┘                                                              
+                                                                                           
+ User Profile Popup (on avatar click)                                                      
+                                                                                           
+ - User name display                                                                       
+ - Personalization → /settings                                                             
+ - Settings → /settings                                                                    
+ - Help (placeholder)                                                                      
+ - Log out                                                                                 
+                                                                                           
+ Behavior                                                                                  
+                                                                                           
+ - Desktop: 56px collapsed (icons + tooltips), 280px expanded on hover/pin                 
+ - Mobile: Hidden drawer, slide from left on hamburger tap                                 
+                                                                                           
+ Modify src/pages/ChatPage.tsx                                                             
+                                                                                           
+ Replace current sidebar with SlimRail, add MobileHeader for mobile.                       
+                                                                                           
+ ---                                                                                       
+ Phase 4: Ambient Video Header & Welcome State                                             
+                                                                                           
+ New Files to Create                                                                       
+                                                                                           
+ - src/components/chat/AmbientVideoHeader.tsx                                              
+ - src/components/chat/WelcomeState.tsx                                                    
+ - src/components/chat/SuggestionCard.tsx                                                  
+                                                                                           
+ AmbientVideoHeader                                                                        
+                                                                                           
+ - Source: public/videos/ambient-kitchen.mp4                                               
+ - Desktop: 120px → 48px when chatting                                                     
+ - Mobile: 80px strip                                                                      
+ - Reduced motion: show poster image only                                                  
+ - Only visible in welcome/empty state                                                     
+                                                                                           
+ WelcomeState Component                                                                    
+                                                                                           
+          Hi [Name]                                                                        
+   "What shall we cook today?"                                                             
+                                                                                           
+   [Suggestion Cards]                                                                      
+                                                                                           
+ Suggestion Cards                                                                          
+                                                                                           
+ - Desktop: 2x2 grid                                                                       
+ - Mobile: Stacked pills (Gemini-style)                                                    
+ - Suggestions:                                                                            
+   - "Quick weeknight dinner"                                                              
+   - "Meal prep ideas"                                                                     
+   - "Use what I have"                                                                     
+   - "Healthier alternatives to..."                                                        
+                                                                                           
+ Modify src/components/chat/ChatWindow.tsx                                                 
+                                                                                           
+ - Empty state: Show AmbientVideoHeader + WelcomeState                                     
+ - Active conversation: Hide video, show chat                                              
+                                                                                           
+ ---                                                                                       
+ Phase 5: Chat Interface Components                                                        
+                                                                                           
+ New Files to Create                                                                       
+                                                                                           
+ - src/components/chat/ChatBubble.tsx                                                      
+ - src/components/chat/InputPill.tsx                                                       
+ - src/components/chat/TypingIndicator.tsx                                                 
+                                                                                           
+ ChatBubble Component                                                                      
+                                                                                           
+ - User: right-aligned, primary bg, rounded-bubble                                         
+ - Assistant: left-aligned, muted bg, ChefHat avatar                                       
+ - Max-width: 720px centered (desktop), full-width (mobile)                                
+ - Support for images and RecipeCard                                                       
+                                                                                           
+ InputPill Component                                                                       
+                                                                                           
+ - Pill shape (rounded-full)                                                               
+ - Glassmorphic background (backdrop-blur)                                                 
+ - Auto-grow textarea (max 4 lines)                                                        
+ - Image preview chips                                                                     
+ - Desktop: floating centered pill                                                         
+ - Mobile: full-width sticky                                                               
+                                                                                           
+ Files to Modify                                                                           
+                                                                                           
+ - src/components/chat/MessageList.tsx - Use ChatBubble                                    
+ - src/components/chat/RecipeCard.tsx - Update to sage theme                               
+                                                                                           
+ ---                                                                                       
+ Phase 6: Accessibility & Polish                                                           
+                                                                                           
+ Requirements                                                                              
+                                                                                           
+ - Skip link to main content                                                               
+ - ARIA labels on all interactive elements                                                 
+ - Keyboard navigation (Tab, Enter, Escape, Arrows)                                        
+ - Focus indicators (2px ring)                                                             
+ - 44x44px touch targets                                                                   
+ - 4.5:1 color contrast (WCAG AA)                                                          
+ - Live region for new messages                                                            
+ - Reduced motion support                                                                  
+                                                                                           
+ ---                                                                                       
+ Assets Required                                                                           
+ ┌────────────┬──────────────────────────────────────────┬───────────────────────────────┐ 
+ │   Asset    │                 Location                 │             Specs             │ 
+ ├────────────┼──────────────────────────────────────────┼───────────────────────────────┤ 
+ │ Ambient    │                                          │ Copy from                     │ 
+ │ video      │ public/videos/ambient-kitchen.mp4        │ C:\Users\conti\Desktop\food   │ 
+ │            │                                          │ images\Chat-gif.mp4           │ 
+ ├────────────┼──────────────────────────────────────────┼───────────────────────────────┤ 
+ │ Poster     │ public/images/ambient-kitchen-poster.jpg │ Extract first frame           │ 
+ │ image      │                                          │                               │ 
+ ├────────────┼──────────────────────────────────────────┼───────────────────────────────┤ 
+ │ Suggestion │ Reference:                               │ For design reference          │ 
+ │  card bg   │ C:\Users\conti\Downloads\95568.jpg       │                               │ 
+ └────────────┴──────────────────────────────────────────┴───────────────────────────────┘ 
+ ---                                                                                       
+ File Summary                                                                              
+                                                                                           
+ New Files (16)                                                                            
+                                                                                           
+ src/providers/ThemeProvider.tsx                                                           
+ src/providers/MotionProvider.tsx                                                          
+ src/providers/SidebarProvider.tsx                                                         
+ src/hooks/useTheme.ts                                                                     
+ src/hooks/useReducedMotion.ts                                                             
+ src/hooks/useMediaQuery.ts                                                                
+ src/hooks/useSidebar.ts                                                                   
+ src/components/layout/SlimRail.tsx                                                        
+ src/components/layout/SlimRailNavItem.tsx                                                 
+ src/components/layout/UserProfilePopup.tsx                                                
+ src/components/layout/MobileDrawer.tsx                                                    
+ src/components/layout/MobileHeader.tsx                                                    
+ src/components/chat/AmbientVideoHeader.tsx                                                
+ src/components/chat/WelcomeState.tsx                                                      
+ src/components/chat/ChatBubble.tsx                                                        
+ src/components/chat/InputPill.tsx                                                         
+                                                                                           
+ Modified Files (6)                                                                        
+                                                                                           
+ src/index.css                                                                             
+ tailwind.config.ts                                                                        
+ src/main.tsx                                                                              
+ src/pages/ChatPage.tsx                                                                    
+ src/components/chat/ChatWindow.tsx                                                        
+ src/components/chat/MessageList.tsx                                                       
+ src/components/chat/RecipeCard.tsx                                                        
+                                                                                           
+ Deprecated (can delete after migration)                                                   
+                                                                                           
+ src/components/chat/ConversationSidebar.tsx → merged into SlimRail                        
+                                                                                           
+ ---                                                                                       
+ Verification Checklist                                                                    
+                                                                                           
+ Visual                                                                                    
+                                                                                           
+ - Sage green palette applied (light + dark mode)                                          
+ - Video plays in header (respects reduced motion)                                         
+ - Sidebar collapses/expands smoothly                                                      
+ - Mobile drawer works with swipe                                                          
+ - Suggestion cards: grid (desktop) / pills (mobile)                                       
+                                                                                           
+ Functional                                                                                
+                                                                                           
+ - Create new conversation from welcome state                                              
+ - Send messages with/without images                                                       
+ - Recipe cards render and save                                                            
+ - Sidebar navigation works (Recipe Book, conversations)                                   
+ - User popup: Settings, Log out work                                                      
+                                                                                           
+ Commands                                                                                  
+                                                                                           
+ npm run dev           # Development                                                       
+ npm run build         # Production build                                                  
+ npx tsc --noEmit      # Type check
+
+ Its from blue apron website yes
+  placeholder 

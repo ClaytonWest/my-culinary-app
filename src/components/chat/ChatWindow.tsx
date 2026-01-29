@@ -3,16 +3,21 @@ import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { MessageList } from "./MessageList";
-import { MessageInput } from "./MessageInput";
-import { ChefHat } from "lucide-react";
+import { InputPill } from "./InputPill";
+import { WelcomeState } from "./WelcomeState";
 import { useToast } from "@/components/common/Toast";
 
 interface ChatWindowProps {
   conversationId: Id<"conversations"> | null;
   onMessageSent?: () => void;
+  onConversationCreated?: (id: Id<"conversations">) => void;
 }
 
-export function ChatWindow({ conversationId, onMessageSent }: ChatWindowProps) {
+export function ChatWindow({
+  conversationId,
+  onMessageSent,
+  onConversationCreated,
+}: ChatWindowProps) {
   const [isAiResponding, setIsAiResponding] = useState(false);
   const { showToast } = useToast();
 
@@ -21,26 +26,30 @@ export function ChatWindow({ conversationId, onMessageSent }: ChatWindowProps) {
     conversationId ? { conversationId } : "skip"
   );
   const sendMessage = useMutation(api.messages.send);
+  const createConversation = useMutation(api.conversations.create);
   const chatWithAI = useAction(api.ai.chat);
 
   const handleSend = async (content: string, imageStorageId?: Id<"_storage">) => {
-    if (!conversationId) return;
+    let activeConversationId = conversationId;
 
     try {
-      // Send user message
+      if (!activeConversationId) {
+        activeConversationId = await createConversation({});
+        onConversationCreated?.(activeConversationId);
+      }
+
       const messageId = await sendMessage({
-        conversationId,
+        conversationId: activeConversationId,
         content,
         imageStorageId,
       });
 
       onMessageSent?.();
 
-      // Trigger AI response
       setIsAiResponding(true);
       try {
         await chatWithAI({
-          conversationId,
+          conversationId: activeConversationId,
           messageId,
         });
       } catch (error) {
@@ -55,28 +64,32 @@ export function ChatWindow({ conversationId, onMessageSent }: ChatWindowProps) {
     }
   };
 
+  const handleSuggestionClick = (suggestion: string) => {
+    handleSend(suggestion);
+  };
+
   if (!conversationId) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-        <ChefHat className="h-16 w-16 mb-4 opacity-50" />
-        <h2 className="text-xl font-semibold mb-2">Welcome to Culinary AI</h2>
-        <p className="text-center max-w-md">
-          Select a conversation from the sidebar or create a new one to start
-          chatting about recipes, cooking tips, and more.
-        </p>
+      <div className="flex-1 flex flex-col">
+        <WelcomeState onSuggestionClick={handleSuggestionClick} />
+        <InputPill
+          onSend={handleSend}
+          disabled={false}
+          placeholder="Ask about recipes, ingredients, cooking tips..."
+        />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col" role="region" aria-label="Chat conversation">
       <MessageList
         messages={messages ?? []}
         isLoading={messages === undefined || isAiResponding}
       />
-      <MessageInput
+      <InputPill
         onSend={handleSend}
-        disabled={!conversationId || isAiResponding}
+        disabled={isAiResponding}
         placeholder="Ask about recipes, ingredients, cooking tips..."
       />
     </div>

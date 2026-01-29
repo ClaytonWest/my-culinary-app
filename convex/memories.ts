@@ -6,6 +6,10 @@ import {
   internalMutation,
 } from "./_generated/server";
 import { requireAuth } from "./lib/auth";
+import {
+  sanitizeMemoryFact,
+  escapeForPrompt,
+} from "./lib/memorySanitization";
 
 // Memory category type
 const memoryCategory = v.union(
@@ -75,31 +79,43 @@ export const getMemoryContext = query({
 
     if (grouped.allergy.length > 0) {
       context += `ALLERGIES (CRITICAL - NEVER INCLUDE):\n`;
-      context += grouped.allergy.map((m) => `  - ${m.fact}`).join("\n") + "\n\n";
+      context +=
+        grouped.allergy.map((m) => `  - ${escapeForPrompt(m.fact)}`).join("\n") +
+        "\n\n";
     }
     if (grouped.intolerance.length > 0) {
       context += `INTOLERANCES (avoid, traces may be acceptable):\n`;
       context +=
-        grouped.intolerance.map((m) => `  - ${m.fact}`).join("\n") + "\n\n";
+        grouped.intolerance
+          .map((m) => `  - ${escapeForPrompt(m.fact)}`)
+          .join("\n") + "\n\n";
     }
     if (grouped.restriction.length > 0) {
       context += `DIETARY RESTRICTIONS (hard limits):\n`;
       context +=
-        grouped.restriction.map((m) => `  - ${m.fact}`).join("\n") + "\n\n";
+        grouped.restriction
+          .map((m) => `  - ${escapeForPrompt(m.fact)}`)
+          .join("\n") + "\n\n";
     }
     if (grouped.equipment.length > 0) {
       context += `KITCHEN EQUIPMENT:\n`;
       context +=
-        grouped.equipment.map((m) => `  - ${m.fact}`).join("\n") + "\n\n";
+        grouped.equipment
+          .map((m) => `  - ${escapeForPrompt(m.fact)}`)
+          .join("\n") + "\n\n";
     }
     if (grouped.goal.length > 0) {
       context += `DIETARY GOALS:\n`;
-      context += grouped.goal.map((m) => `  - ${m.fact}`).join("\n") + "\n\n";
+      context +=
+        grouped.goal.map((m) => `  - ${escapeForPrompt(m.fact)}`).join("\n") +
+        "\n\n";
     }
     if (grouped.preference.length > 0) {
       context += `PREFERENCES:\n`;
       context +=
-        grouped.preference.map((m) => `  - ${m.fact}`).join("\n") + "\n\n";
+        grouped.preference
+          .map((m) => `  - ${escapeForPrompt(m.fact)}`)
+          .join("\n") + "\n\n";
     }
 
     return context;
@@ -137,31 +153,43 @@ export const getMemoryContextInternal = internalQuery({
 
     if (grouped.allergy.length > 0) {
       context += `ALLERGIES (CRITICAL - NEVER INCLUDE):\n`;
-      context += grouped.allergy.map((m) => `  - ${m.fact}`).join("\n") + "\n\n";
+      context +=
+        grouped.allergy.map((m) => `  - ${escapeForPrompt(m.fact)}`).join("\n") +
+        "\n\n";
     }
     if (grouped.intolerance.length > 0) {
       context += `INTOLERANCES:\n`;
       context +=
-        grouped.intolerance.map((m) => `  - ${m.fact}`).join("\n") + "\n\n";
+        grouped.intolerance
+          .map((m) => `  - ${escapeForPrompt(m.fact)}`)
+          .join("\n") + "\n\n";
     }
     if (grouped.restriction.length > 0) {
       context += `DIETARY RESTRICTIONS:\n`;
       context +=
-        grouped.restriction.map((m) => `  - ${m.fact}`).join("\n") + "\n\n";
+        grouped.restriction
+          .map((m) => `  - ${escapeForPrompt(m.fact)}`)
+          .join("\n") + "\n\n";
     }
     if (grouped.equipment.length > 0) {
       context += `KITCHEN EQUIPMENT:\n`;
       context +=
-        grouped.equipment.map((m) => `  - ${m.fact}`).join("\n") + "\n\n";
+        grouped.equipment
+          .map((m) => `  - ${escapeForPrompt(m.fact)}`)
+          .join("\n") + "\n\n";
     }
     if (grouped.goal.length > 0) {
       context += `DIETARY GOALS:\n`;
-      context += grouped.goal.map((m) => `  - ${m.fact}`).join("\n") + "\n\n";
+      context +=
+        grouped.goal.map((m) => `  - ${escapeForPrompt(m.fact)}`).join("\n") +
+        "\n\n";
     }
     if (grouped.preference.length > 0) {
       context += `PREFERENCES:\n`;
       context +=
-        grouped.preference.map((m) => `  - ${m.fact}`).join("\n") + "\n\n";
+        grouped.preference
+          .map((m) => `  - ${escapeForPrompt(m.fact)}`)
+          .join("\n") + "\n\n";
     }
 
     return context;
@@ -185,17 +213,24 @@ export const addMemories = internalMutation({
     const now = Date.now();
 
     for (const memory of args.memories) {
+      // Sanitize the memory fact
+      const sanitized = sanitizeMemoryFact(memory.fact, memory.category);
+      if (sanitized.rejectionReason) {
+        console.warn(`Rejected extracted memory: ${sanitized.rejectionReason}`);
+        continue;
+      }
+
       // Check for duplicate facts
       const existing = await ctx.db
         .query("userMemories")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .filter((q) => q.eq(q.field("fact"), memory.fact))
+        .filter((q) => q.eq(q.field("fact"), sanitized.sanitized))
         .first();
 
       if (!existing) {
         await ctx.db.insert("userMemories", {
           userId: args.userId,
-          fact: memory.fact,
+          fact: sanitized.sanitized,
           category: memory.category,
           confidence: memory.confidence,
           extractedAt: now,
@@ -230,9 +265,14 @@ export const addMemoryManual = mutation({
   handler: async (ctx, args) => {
     const userId = await requireAuth(ctx);
 
+    const result = sanitizeMemoryFact(args.fact, args.category);
+    if (result.rejectionReason) {
+      throw new Error(`Invalid memory: ${result.rejectionReason}`);
+    }
+
     await ctx.db.insert("userMemories", {
       userId,
-      fact: args.fact.slice(0, 500),
+      fact: result.sanitized,
       category: args.category,
       confidence: "high",
       extractedAt: Date.now(),
@@ -358,7 +398,17 @@ export const addMemoryForTool = internalMutation({
     sourceConversationId: v.optional(v.id("conversations")),
   },
   handler: async (ctx, args) => {
-    const factLower = args.fact.toLowerCase();
+    // Sanitize the input first
+    const sanitized = sanitizeMemoryFact(args.fact, args.category);
+    if (sanitized.rejectionReason) {
+      return {
+        success: false,
+        message: sanitized.rejectionReason,
+        isDuplicate: false,
+      };
+    }
+
+    const factLower = sanitized.sanitized.toLowerCase();
 
     // Check for similar existing memories
     const existing = await ctx.db
@@ -388,7 +438,7 @@ export const addMemoryForTool = internalMutation({
     // Insert new memory
     const id = await ctx.db.insert("userMemories", {
       userId: args.userId,
-      fact: args.fact.slice(0, 500),
+      fact: sanitized.sanitized,
       category: args.category,
       confidence: "high",
       extractedAt: Date.now(),
@@ -397,7 +447,7 @@ export const addMemoryForTool = internalMutation({
 
     return {
       success: true,
-      message: `Remembered: "${args.fact}" (${args.category})`,
+      message: `Remembered: "${sanitized.sanitized}" (${args.category})`,
       memoryId: id,
       isDuplicate: false,
     };
@@ -434,7 +484,19 @@ export const updateMemoryForTool = internalMutation({
 
     // Update the memory
     const updates: Record<string, any> = {};
-    if (args.newFact) updates.fact = args.newFact.slice(0, 500);
+    if (args.newFact) {
+      const sanitized = sanitizeMemoryFact(
+        args.newFact,
+        args.newCategory || match.category
+      );
+      if (sanitized.rejectionReason) {
+        return {
+          success: false,
+          message: `Invalid update: ${sanitized.rejectionReason}`,
+        };
+      }
+      updates.fact = sanitized.sanitized;
+    }
     if (args.newCategory) updates.category = args.newCategory;
 
     if (Object.keys(updates).length === 0) {

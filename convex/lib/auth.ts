@@ -41,3 +41,22 @@ export function requireOwnership(
     throw new Error("Access denied");
   }
 }
+
+export async function verifyFileOwnership(
+  ctx: QueryCtx | MutationCtx,
+  storageId: Id<"_storage">,
+  userId: Id<"users">
+): Promise<void> {
+  const file = await ctx.db
+    .query("uploadedFiles")
+    .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+    .first();
+
+  if (!file) {
+    throw new Error("File not found or not registered");
+  }
+
+  if (file.userId !== userId) {
+    throw new Error("Access denied: file belongs to another user");
+  }
+}

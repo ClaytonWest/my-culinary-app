@@ -62,7 +62,7 @@ export function RecipeCard({
   };
 
   return (
-    <Card className="mt-3 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
+    <Card className="mt-3 bg-primary/5 dark:bg-primary/10 border-primary/20 dark:border-primary/30">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
@@ -94,7 +94,7 @@ export function RecipeCard({
             disabled={saved || saving}
             variant={saved ? "outline" : "default"}
             size="sm"
-            className={saved ? "bg-green-50 text-green-700 border-green-200" : ""}
+            className={saved ? "bg-primary/10 text-primary border-primary/30" : ""}
           >
             {saved ? (
               <>

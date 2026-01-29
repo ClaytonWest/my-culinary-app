@@ -19,6 +19,7 @@ export function ImageUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+  const registerUpload = useMutation(api.files.registerUpload);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,6 +54,7 @@ export function ImageUpload({
       }
 
       const { storageId } = await response.json();
+      await registerUpload({ storageId });
       onImageUploaded(storageId);
     } catch (error) {
       console.error("Upload error:", error);

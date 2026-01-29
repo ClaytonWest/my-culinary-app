@@ -13,7 +13,6 @@ import {
   extractRecipeJson,
 } from "./lib/recipeGeneration";
 import { analyzeIngredientImage } from "./lib/imageAnalysis";
-import { Id } from "./_generated/dataModel";
 
 // ============================================
 // MEMORY MANAGEMENT TOOLS FOR FUNCTION CALLING
@@ -247,132 +246,137 @@ ${RECIPE_GENERATION_PROMPT}`;
     let toolCallsCount = 0;
     const MAX_TOOL_CALLS = 5; // Safety limit
 
-    // Initial request with tools
-    let response = await client.chat.completions.create({
-      model: "gpt-4o",
-      max_completion_tokens: 2048,
-      messages,
-      tools: MEMORY_TOOLS,
-      tool_choice: "auto",
-    });
-
-    // Tool loop - keep processing until no more tool calls
-    while (
-      response.choices[0]?.message?.tool_calls &&
-      response.choices[0].message.tool_calls.length > 0 &&
-      toolCallsCount < MAX_TOOL_CALLS
-    ) {
-      const assistantMessage = response.choices[0].message;
-      messages.push(assistantMessage);
-
-      // Process each tool call (we know tool_calls exists from while condition)
-      const toolCalls = assistantMessage.tool_calls!;
-      for (const toolCall of toolCalls) {
-        const functionName = toolCall.function.name;
-        const functionArgs = JSON.parse(toolCall.function.arguments);
-
-        let toolResult: any;
-
-        try {
-          switch (functionName) {
-            case "list_user_memories": {
-              const memories = await ctx.runQuery(
-                internal.memories.listMemoriesForTool,
-                {
-                  userId,
-                  category: functionArgs.category as MemoryCategory | undefined,
-                }
-              );
-
-              if (memories.length === 0) {
-                toolResult = {
-                  success: true,
-                  message: "No memories stored yet.",
-                  memories: [],
-                };
-              } else {
-                toolResult = {
-                  success: true,
-                  message: `Found ${memories.length} memories.`,
-                  memories: memories,
-                };
-              }
-              break;
-            }
-
-            case "remove_user_memory": {
-              const result = await ctx.runMutation(
-                internal.memories.removeBySearch,
-                {
-                  userId,
-                  searchTerm: functionArgs.searchTerm,
-                }
-              );
-              toolResult = result;
-              break;
-            }
-
-            case "add_user_memory": {
-              const result = await ctx.runMutation(
-                internal.memories.addMemoryForTool,
-                {
-                  userId,
-                  fact: functionArgs.fact,
-                  category: functionArgs.category as MemoryCategory,
-                  sourceConversationId: args.conversationId,
-                }
-              );
-              toolResult = result;
-              break;
-            }
-
-            case "update_user_memory": {
-              const result = await ctx.runMutation(
-                internal.memories.updateMemoryForTool,
-                {
-                  userId,
-                  searchTerm: functionArgs.searchTerm,
-                  newFact: functionArgs.newFact,
-                  newCategory: functionArgs.newCategory as
-                    | MemoryCategory
-                    | undefined,
-                }
-              );
-              toolResult = result;
-              break;
-            }
-
-            default:
-              toolResult = { error: `Unknown function: ${functionName}` };
-          }
-        } catch (error: any) {
-          toolResult = { error: error.message || "Tool execution failed" };
-        }
-
-        // Add tool result to messages
-        messages.push({
-          role: "tool",
-          tool_call_id: toolCall.id,
-          content: JSON.stringify(toolResult),
-        });
-      }
-
-      toolCallsCount++;
-
-      // Continue conversation with tool results
-      response = await client.chat.completions.create({
+    try {
+      // Initial request with tools
+      let response = await client.chat.completions.create({
         model: "gpt-4o",
         max_completion_tokens: 2048,
         messages,
         tools: MEMORY_TOOLS,
         tool_choice: "auto",
       });
-    }
 
-    // Get final response
-    aiResponse =
-      response.choices[0]?.message?.content ||
-      "I'm sorry, I couldn't generate a response.";
+      // Tool loop - keep processing until no more tool calls
+      while (
+        response.choices[0]?.message?.tool_calls &&
+        response.choices[0].message.tool_calls.length > 0 &&
+        toolCallsCount < MAX_TOOL_CALLS
+      ) {
+        const assistantMessage = response.choices[0].message;
+        messages.push(assistantMessage);
+
+        // Process each tool call (we know tool_calls exists from while condition)
+        const toolCalls = assistantMessage.tool_calls!;
+        for (const toolCall of toolCalls) {
+          const functionName = toolCall.function.name;
+          let toolResult: any;
+
+          try {
+            const functionArgs = JSON.parse(toolCall.function.arguments);
+
+            switch (functionName) {
+              case "list_user_memories": {
+                const memories = await ctx.runQuery(
+                  internal.memories.listMemoriesForTool,
+                  {
+                    userId,
+                    category: functionArgs.category as MemoryCategory | undefined,
+                  }
+                );
+
+                if (memories.length === 0) {
+                  toolResult = {
+                    success: true,
+                    message: "No memories stored yet.",
+                    memories: [],
+                  };
+                } else {
+                  toolResult = {
+                    success: true,
+                    message: `Found ${memories.length} memories.`,
+                    memories: memories,
+                  };
+                }
+                break;
+              }
+
+              case "remove_user_memory": {
+                const result = await ctx.runMutation(
+                  internal.memories.removeBySearch,
+                  {
+                    userId,
+                    searchTerm: functionArgs.searchTerm,
+                  }
+                );
+                toolResult = result;
+                break;
+              }
+
+              case "add_user_memory": {
+                const result = await ctx.runMutation(
+                  internal.memories.addMemoryForTool,
+                  {
+                    userId,
+                    fact: functionArgs.fact,
+                    category: functionArgs.category as MemoryCategory,
+                    sourceConversationId: args.conversationId,
+                  }
+                );
+                toolResult = result;
+                break;
+              }
+
+              case "update_user_memory": {
+                const result = await ctx.runMutation(
+                  internal.memories.updateMemoryForTool,
+                  {
+                    userId,
+                    searchTerm: functionArgs.searchTerm,
+                    newFact: functionArgs.newFact,
+                    newCategory: functionArgs.newCategory as
+                      | MemoryCategory
+                      | undefined,
+                  }
+                );
+                toolResult = result;
+                break;
+              }
+
+              default:
+                toolResult = { error: `Unknown function: ${functionName}` };
+            }
+          } catch (error: any) {
+            toolResult = { error: error.message || "Tool execution failed" };
+          }
+
+          // Add tool result to messages
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: JSON.stringify(toolResult),
+          });
+        }
+
+        toolCallsCount++;
+
+        // Continue conversation with tool results
+        response = await client.chat.completions.create({
+          model: "gpt-4o",
+          max_completion_tokens: 2048,
+          messages,
+          tools: MEMORY_TOOLS,
+          tool_choice: "auto",
+        });
+      }
+
+      // Get final response
+      aiResponse =
+        response.choices[0]?.message?.content ||
+        "I'm sorry, I couldn't generate a response.";
+    } catch (error: any) {
+      console.error("OpenAI API error:", error);
+      aiResponse = "I'm having trouble connecting right now. Please try again in a moment.";
+    }
 
     // Layer 3: Output guardrail
     if (!checkOutputGuardrail(aiResponse)) {
@@ -392,11 +396,12 @@ ${RECIPE_GENERATION_PROMPT}`;
     });
 
     // Trigger memory compaction in background (don't await)
-    void ctx
-      .runAction(internal.memoryCompaction.maybeRunCompaction, {
-        conversationId: args.conversationId,
-      })
-      .catch((err) => console.error("Memory compaction error:", err));
+    // Fire and forget - Convex will schedule this to run
+    ctx.runAction(internal.memoryCompaction.maybeRunCompaction, {
+      conversationId: args.conversationId,
+    }).catch(() => {
+      // Silently ignore failures - compaction is not critical
+    });
 
     return { success: true, offTopic: false, toolCallsUsed: toolCallsCount };
   },
