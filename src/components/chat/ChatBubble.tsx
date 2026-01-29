@@ -2,6 +2,7 @@ import { Doc } from "../../../convex/_generated/dataModel";
 import { ChefHat, User } from "lucide-react";
 import { RecipeCard } from "./RecipeCard";
 import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
 
 interface ChatBubbleProps {
   message: Doc<"messages">;
@@ -40,9 +41,15 @@ export function ChatBubble({ message }: ChatBubbleProps) {
               : "bg-muted text-foreground"
           )}
         >
-          <p className="whitespace-pre-wrap text-base leading-relaxed">
-            {message.content}
-          </p>
+          {isUser ? (
+            <p className="whitespace-pre-wrap text-base leading-relaxed">
+              {message.content}
+            </p>
+          ) : (
+            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5">
+              <ReactMarkdown>{message.content}</ReactMarkdown>
+            </div>
+          )}
           {message.imageStorageId && (
             <div
               className={cn(
