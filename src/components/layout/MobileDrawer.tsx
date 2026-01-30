@@ -144,7 +144,7 @@ export function MobileDrawer({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-2">
+        <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent">
           <div className="text-xs font-medium text-muted-foreground px-3 py-2">
             Your Chats
           </div>

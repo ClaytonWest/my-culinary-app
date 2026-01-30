@@ -7,7 +7,7 @@ interface TypingIndicatorProps {
 
 export function TypingIndicator({ className }: TypingIndicatorProps) {
   return (
-    <div className={cn("flex gap-3 max-w-chat", className)}>
+    <div className={cn("flex gap-3 max-w-chat mx-auto", className)}>
       <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-primary/10">
         <ChefHat className="h-4 w-4 text-primary" />
       </div>

@@ -117,7 +117,7 @@ export function SlimRail({
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-2">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-2 scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent">
         {isExpanded && (
           <div className="text-xs font-medium text-muted-foreground px-3 py-2">
             Your Chats
