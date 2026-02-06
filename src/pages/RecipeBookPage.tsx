@@ -15,6 +15,8 @@ import { useToast } from "@/components/common/Toast";
 export function RecipeBookPage() {
   const [search, setSearch] = useState("");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [mealTypeFilter, setMealTypeFilter] = useState<string>("");
+  const [proteinTypeFilter, setProteinTypeFilter] = useState<string>("");
   const [selectedRecipe, setSelectedRecipe] = useState<Doc<"recipes"> | null>(
     null
   );
@@ -23,6 +25,8 @@ export function RecipeBookPage() {
   const recipes = useQuery(api.recipes.list, {
     search: search || undefined,
     favoritesOnly: showFavoritesOnly || undefined,
+    mealType: mealTypeFilter || undefined,
+    proteinType: proteinTypeFilter || undefined,
   });
   const toggleFavorite = useMutation(api.recipes.toggleFavorite);
   const deleteRecipe = useMutation(api.recipes.remove);
@@ -71,9 +75,6 @@ export function RecipeBookPage() {
                 isFavorite: !selectedRecipe.isFavorite,
               });
             }}
-            onEdit={() => {
-              showToast("Edit functionality coming soon!", "info");
-            }}
           />
         </main>
       </div>
@@ -98,7 +99,7 @@ export function RecipeBookPage() {
       {/* Content */}
       <main className="max-w-4xl mx-auto px-4 py-8">
         {/* Search and filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -121,6 +122,43 @@ export function RecipeBookPage() {
             />
             Favorites
           </Button>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <select
+            value={mealTypeFilter}
+            onChange={(e) => setMealTypeFilter(e.target.value)}
+            className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <option value="">All Meal Types</option>
+            <option value="Main Dish">Main Dish</option>
+            <option value="Side Dish">Side Dish</option>
+            <option value="Appetizer">Appetizer</option>
+            <option value="Dessert">Dessert</option>
+            <option value="Snack">Snack</option>
+            <option value="Soup">Soup</option>
+            <option value="Salad">Salad</option>
+            <option value="Breakfast">Breakfast</option>
+            <option value="Beverage">Beverage</option>
+          </select>
+          <select
+            value={proteinTypeFilter}
+            onChange={(e) => setProteinTypeFilter(e.target.value)}
+            className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <option value="">All Proteins</option>
+            <option value="Chicken">Chicken</option>
+            <option value="Beef">Beef</option>
+            <option value="Pork">Pork</option>
+            <option value="Seafood">Seafood</option>
+            <option value="Fish">Fish</option>
+            <option value="Turkey">Turkey</option>
+            <option value="Lamb">Lamb</option>
+            <option value="Tofu">Tofu</option>
+            <option value="Legumes">Legumes</option>
+            <option value="Eggs">Eggs</option>
+            <option value="Veggie">Veggie</option>
+            <option value="Other">Other</option>
+          </select>
         </div>
 
         {/* Recipe list */}

@@ -17,7 +17,9 @@ Format your response as:
   "prepTime": 15,
   "cookTime": 30,
   "servings": 4,
-  "dietaryTags": ["vegetarian", "gluten-free"]
+  "dietaryTags": ["vegetarian", "gluten-free"],
+  "mealType": "Main Dish",
+  "proteinType": "Chicken"
 }
 RECIPE_JSON -->
 
@@ -27,7 +29,11 @@ Rules:
 - prepTime and cookTime are in minutes
 - dietaryTags reflect actual dietary properties
 - Instructions should be clear, actionable steps
-- Amounts should be practical measurements`;
+- Amounts should be practical measurements
+- mealType MUST be one of: "Main Dish", "Side Dish", "Appetizer", "Dessert", "Snack", "Soup", "Salad", "Breakfast", "Beverage"
+- proteinType MUST be one of: "Chicken", "Beef", "Pork", "Seafood", "Fish", "Turkey", "Lamb", "Tofu", "Legumes", "Eggs", "Veggie", "Other"
+- For vegetarian/vegan recipes, use "Veggie" as proteinType
+- For recipes with multiple proteins, use the primary one`;
 
 // Parse recipe JSON from AI response
 export function extractRecipeJson(aiResponse: string): {

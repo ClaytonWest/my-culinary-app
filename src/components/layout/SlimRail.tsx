@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -11,6 +12,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Trash2,
+  X,
 } from "lucide-react";
 import { useSidebar } from "@/providers/SidebarProvider";
 import { useMotion } from "@/providers/MotionProvider";
@@ -34,8 +36,20 @@ export function SlimRail({
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+
   const conversations = useQuery(api.conversations.list, { limit: 20 });
+  const searchResults = useQuery(
+    api.conversations.search,
+    isSearching && searchTerm.trim()
+      ? { searchTerm: searchTerm.trim() }
+      : "skip"
+  );
   const removeConversation = useMutation(api.conversations.remove);
+
+  const displayedConversations =
+    isSearching && searchTerm.trim() ? searchResults : conversations;
 
   const handleDelete = async (
     e: React.MouseEvent,
@@ -103,9 +117,37 @@ export function SlimRail({
           icon={Search}
           label="Search"
           isExpanded={isExpanded}
-          onClick={() => {}}
+          isActive={isSearching}
+          onClick={() => {
+            setIsSearching(!isSearching);
+            if (isSearching) setSearchTerm("");
+          }}
         />
       </div>
+
+      {isExpanded && isSearching && (
+        <div className="px-3 pb-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search conversations..."
+              className="w-full pl-8 pr-8 py-1.5 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              autoFocus
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="px-2 py-1">
         <SlimRailNavItem
@@ -132,16 +174,18 @@ export function SlimRail({
               isActive={location.pathname === "/"}
               onClick={() => navigate("/")}
             />
-          ) : conversations === undefined ? (
+          ) : displayedConversations === undefined ? (
             <div className="text-center text-muted-foreground text-sm py-4">
               Loading...
             </div>
-          ) : conversations.length === 0 ? (
+          ) : displayedConversations.length === 0 ? (
             <div className="text-center text-muted-foreground text-sm py-4">
-              No conversations yet
+              {isSearching && searchTerm.trim()
+                ? "No results found"
+                : "No conversations yet"}
             </div>
           ) : (
-            conversations.map((conversation) => (
+            displayedConversations.map((conversation) => (
               <div
                 key={conversation._id}
                 onClick={() => onSelectConversation?.(conversation._id)}

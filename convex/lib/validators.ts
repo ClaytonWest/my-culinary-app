@@ -58,6 +58,8 @@ export const RecipeInputSchema = z.object({
   prepTime: z.number().int().min(0).max(1440).optional(),
   cookTime: z.number().int().min(0).max(1440).optional(),
   dietaryTags: z.array(z.string().max(50)).max(20).optional(),
+  mealType: z.string().max(50).optional(),
+  proteinType: z.string().max(50).optional(),
 });
 
 // Memory category validation

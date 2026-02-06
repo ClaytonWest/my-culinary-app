@@ -1,21 +1,19 @@
 import { Doc } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Heart, Clock, Users, Edit } from "lucide-react";
+import { ArrowLeft, Heart, Clock, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RecipeDetailProps {
   recipe: Doc<"recipes">;
   onBack: () => void;
   onToggleFavorite: () => void;
-  onEdit: () => void;
 }
 
 export function RecipeDetail({
   recipe,
   onBack,
   onToggleFavorite,
-  onEdit,
 }: RecipeDetailProps) {
   return (
     <div className="space-y-6">
@@ -38,10 +36,6 @@ export function RecipeDetail({
             )}
           />
         </Button>
-        <Button variant="outline" size="sm" onClick={onEdit}>
-          <Edit className="h-4 w-4 mr-2" />
-          Edit
-        </Button>
       </div>
 
       {/* Meta info */}
@@ -63,6 +57,22 @@ export function RecipeDetail({
           <span>Serves {recipe.servings}</span>
         </div>
       </div>
+
+      {/* Category badges */}
+      {(recipe.mealType || recipe.proteinType) && (
+        <div className="flex flex-wrap gap-2">
+          {recipe.mealType && (
+            <span className="text-sm bg-secondary text-secondary-foreground px-3 py-1 rounded-full">
+              {recipe.mealType}
+            </span>
+          )}
+          {recipe.proteinType && (
+            <span className="text-sm bg-accent text-accent-foreground px-3 py-1 rounded-full">
+              {recipe.proteinType}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Dietary tags */}
       {recipe.dietaryTags.length > 0 && (

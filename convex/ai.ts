@@ -147,6 +147,7 @@ export const chat = action({
   args: {
     conversationId: v.id("conversations"),
     messageId: v.id("messages"),
+    mentionedRecipeIds: v.optional(v.array(v.id("recipes"))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -169,7 +170,7 @@ export const chat = action({
           // Fetch and convert to base64
           const imageResponse = await fetch(imageUrl);
           const imageBuffer = await imageResponse.arrayBuffer();
-          const base64 = Buffer.from(imageBuffer).toString("base64");
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
 
           const analysis = await analyzeIngredientImage(
             client,
@@ -215,10 +216,41 @@ export const chat = action({
       { userId }
     );
 
+    // Fetch referenced recipe context if @mentions present
+    let recipeContext = "";
+    if (args.mentionedRecipeIds && args.mentionedRecipeIds.length > 0) {
+      const recipes = await Promise.all(
+        args.mentionedRecipeIds.map((id) =>
+          ctx.runQuery(internal.recipes.getInternal, { id })
+        )
+      );
+
+      const validRecipes = recipes.filter(Boolean);
+      if (validRecipes.length > 0) {
+        const recipeTexts = validRecipes.map((r) => {
+          const ingredients = r!.ingredients
+            .map((i: { amount: string; unit: string; name: string }) => `- ${i.amount} ${i.unit} ${i.name}`)
+            .join("\n");
+          const instructions = r!.instructions
+            .map((step: string, i: number) => `${i + 1}. ${step}`)
+            .join("\n");
+          return `### ${r!.title}
+${r!.description}
+**Meal Type:** ${r!.mealType || "N/A"} | **Protein:** ${r!.proteinType || "N/A"} | **Servings:** ${r!.servings}
+**Ingredients:**
+${ingredients}
+**Instructions:**
+${instructions}`;
+        });
+
+        recipeContext = `\n\n## Referenced Recipes from User's Recipe Book\n${recipeTexts.join("\n\n")}\n\nThe user is referencing the above recipe(s). Use this information to inform your response.`;
+      }
+    }
+
     // Build system prompt with memory context injected
     const systemPrompt = `${CULINARY_SYSTEM_PROMPT.replace("{memoryContext}", memoryContext || "No dietary profile stored yet.")}
 
-${RECIPE_GENERATION_PROMPT}`;
+${RECIPE_GENERATION_PROMPT}${recipeContext}`;
 
     // Build messages for GPT (include image analysis context in history)
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
@@ -397,7 +429,7 @@ ${RECIPE_GENERATION_PROMPT}`;
 
     // Trigger memory compaction in background (don't await)
     // Fire and forget - Convex will schedule this to run
-    ctx.runAction(internal.memoryCompaction.maybeRunCompaction, {
+    await ctx.runAction(internal.memoryCompaction.maybeRunCompaction, {
       conversationId: args.conversationId,
     }).catch(() => {
       // Silently ignore failures - compaction is not critical

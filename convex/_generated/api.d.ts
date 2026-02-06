@@ -25,6 +25,7 @@ import type * as memories from "../memories.js";
 import type * as memoryCompaction from "../memoryCompaction.js";
 import type * as messages from "../messages.js";
 import type * as recipes from "../recipes.js";
+import type * as titleGeneration from "../titleGeneration.js";
 import type * as users from "../users.js";
 
 import type {
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   memoryCompaction: typeof memoryCompaction;
   messages: typeof messages;
   recipes: typeof recipes;
+  titleGeneration: typeof titleGeneration;
   users: typeof users;
 }>;
 

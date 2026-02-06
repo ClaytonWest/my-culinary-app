@@ -71,8 +71,18 @@ export function RecipeList({
                 {recipe.servings}
               </span>
             </div>
-            {recipe.dietaryTags.length > 0 && (
+            {(recipe.mealType || recipe.proteinType || recipe.dietaryTags.length > 0) && (
               <div className="flex flex-wrap gap-1 mt-2">
+                {recipe.mealType && (
+                  <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded">
+                    {recipe.mealType}
+                  </span>
+                )}
+                {recipe.proteinType && (
+                  <span className="text-xs bg-accent text-accent-foreground px-2 py-0.5 rounded">
+                    {recipe.proteinType}
+                  </span>
+                )}
                 {recipe.dietaryTags.slice(0, 3).map((tag) => (
                   <span
                     key={tag}

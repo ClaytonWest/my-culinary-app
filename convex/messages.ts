@@ -6,6 +6,7 @@ import {
   internalMutation,
 } from "./_generated/server";
 import { requireAuth, requireOwnership, verifyFileOwnership } from "./lib/auth";
+import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { validatePrompt } from "./lib/validators";
 
@@ -80,6 +81,12 @@ export const send = mutation({
     if (conversation.title === "New Chat" && conversation.messageCount === 0) {
       const title = validatedContent.slice(0, 50) + (validatedContent.length > 50 ? "..." : "");
       await ctx.db.patch(args.conversationId, { title });
+
+      // Fire async AI title generation - Convex reactivity will push update to sidebar
+      await ctx.scheduler.runAfter(0, internal.titleGeneration.generateTitle, {
+        conversationId: args.conversationId,
+        firstMessage: validatedContent,
+      });
     }
 
     return messageId;

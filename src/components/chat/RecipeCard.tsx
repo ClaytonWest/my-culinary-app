@@ -16,6 +16,8 @@ interface RecipeData {
   cookTime?: number;
   servings: number;
   dietaryTags: string[];
+  mealType?: string;
+  proteinType?: string;
 }
 
 interface RecipeCardProps {
@@ -47,6 +49,8 @@ export function RecipeCard({
       await createRecipe({
         ...recipe,
         dietaryTags: recipe.dietaryTags || [],
+        mealType: recipe.mealType,
+        proteinType: recipe.proteinType,
         source: "ai_generated",
         sourceConversationId: conversationId,
         sourceMessageId: messageId,

@@ -1,13 +1,42 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { requireAuth, requireOwnership } from "./lib/auth";
 import { RecipeInputSchema } from "./lib/validators";
+
+const mealTypeValidator = v.optional(v.union(
+  v.literal("Main Dish"),
+  v.literal("Side Dish"),
+  v.literal("Appetizer"),
+  v.literal("Dessert"),
+  v.literal("Snack"),
+  v.literal("Soup"),
+  v.literal("Salad"),
+  v.literal("Breakfast"),
+  v.literal("Beverage")
+));
+
+const proteinTypeValidator = v.optional(v.union(
+  v.literal("Chicken"),
+  v.literal("Beef"),
+  v.literal("Pork"),
+  v.literal("Seafood"),
+  v.literal("Fish"),
+  v.literal("Turkey"),
+  v.literal("Lamb"),
+  v.literal("Tofu"),
+  v.literal("Legumes"),
+  v.literal("Eggs"),
+  v.literal("Veggie"),
+  v.literal("Other")
+));
 
 export const list = query({
   args: {
     limit: v.optional(v.number()),
     favoritesOnly: v.optional(v.boolean()),
     search: v.optional(v.string()),
+    mealType: v.optional(v.string()),
+    proteinType: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await requireAuth(ctx);
@@ -44,6 +73,21 @@ export const list = query({
       );
     }
 
+    // Category filters
+    if (args.mealType) {
+      recipes = recipes.filter((r) => r.mealType === args.mealType);
+    }
+    if (args.proteinType) {
+      recipes = recipes.filter((r) => r.proteinType === args.proteinType);
+    }
+
+    // Sort favorites to the top
+    recipes.sort((a, b) => {
+      if (a.isFavorite && !b.isFavorite) return -1;
+      if (!a.isFavorite && b.isFavorite) return 1;
+      return 0;
+    });
+
     return recipes;
   },
 });
@@ -79,6 +123,8 @@ export const create = mutation({
     cookTime: v.optional(v.number()),
     servings: v.number(),
     dietaryTags: v.array(v.string()),
+    mealType: mealTypeValidator,
+    proteinType: proteinTypeValidator,
     source: v.union(
       v.literal("ai_generated"),
       v.literal("user_created"),
@@ -99,6 +145,8 @@ export const create = mutation({
       prepTime: args.prepTime,
       cookTime: args.cookTime,
       dietaryTags: args.dietaryTags,
+      mealType: args.mealType,
+      proteinType: args.proteinType,
     });
 
     const now = Date.now();
@@ -113,6 +161,8 @@ export const create = mutation({
       cookTime: args.cookTime,
       servings: args.servings,
       dietaryTags: args.dietaryTags,
+      mealType: args.mealType,
+      proteinType: args.proteinType,
       source: args.source,
       sourceConversationId: args.sourceConversationId,
       sourceMessageId: args.sourceMessageId,
@@ -141,6 +191,8 @@ export const createInternal = internalMutation({
     cookTime: v.optional(v.number()),
     servings: v.number(),
     dietaryTags: v.optional(v.array(v.string())),
+    mealType: mealTypeValidator,
+    proteinType: proteinTypeValidator,
     source: v.union(
       v.literal("ai_generated"),
       v.literal("user_created"),
@@ -158,6 +210,8 @@ export const createInternal = internalMutation({
       prepTime: args.prepTime,
       cookTime: args.cookTime,
       dietaryTags: args.dietaryTags,
+      mealType: args.mealType,
+      proteinType: args.proteinType,
     });
 
     const now = Date.now();
@@ -261,5 +315,45 @@ export const remove = mutation({
 
     requireOwnership(recipe.userId, userId);
     await ctx.db.delete(args.id);
+  },
+});
+
+// Lightweight autocomplete endpoint for @mention
+export const listForMention = query({
+  args: {
+    search: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx);
+    const limit = Math.min(args.limit ?? 10, 20);
+
+    const recipes = await ctx.db
+      .query("recipes")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .take(50);
+
+    let filtered = recipes;
+    if (args.search) {
+      const searchLower = args.search.toLowerCase();
+      filtered = recipes.filter((r) =>
+        r.title.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered.slice(0, limit).map((r) => ({
+      _id: r._id,
+      title: r.title,
+      mealType: r.mealType,
+      proteinType: r.proteinType,
+    }));
+  },
+});
+
+// Internal query for fetching full recipe data (used by AI context injection)
+export const getInternal = internalQuery({
+  args: { id: v.id("recipes") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
   },
 });
