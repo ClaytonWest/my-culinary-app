@@ -32,7 +32,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
         )}
       </div>
 
-      <div className={cn("space-y-2", isUser ? "max-w-[80%] flex flex-col items-end" : "max-w-full")}>
+      <div className={cn("space-y-2", isUser ? "max-w-[80%] flex flex-col items-end" : "max-w-[85%]")}>
         <div
           className={cn(
             isUser
@@ -45,7 +45,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
               {message.content}
             </p>
           ) : (
-            <div className="prose prose-lg dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5">
+            <div className="prose prose-base dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5">
               <ReactMarkdown>{message.content}</ReactMarkdown>
             </div>
           )}
