@@ -46,7 +46,8 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_userId", ["userId"])
-    .index("by_userId_lastMessageAt", ["userId", "lastMessageAt"]),
+    .index("by_userId_lastMessageAt", ["userId", "lastMessageAt"])
+    .searchIndex("search_title", { searchField: "title", filterFields: ["userId"] }),
 
   // Messages within conversations
   messages: defineTable({
@@ -62,7 +63,8 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_conversationId", ["conversationId"])
-    .index("by_userId", ["userId"]),
+    .index("by_userId", ["userId"])
+    .searchIndex("search_content", { searchField: "content", filterFields: ["userId"] }),
 
   // Uploaded files ownership tracking
   uploadedFiles: defineTable({
@@ -83,6 +85,8 @@ export default defineSchema({
         name: v.string(),
         amount: v.string(),
         unit: v.string(),
+        preparation: v.optional(v.string()),
+        optional: v.optional(v.boolean()),
       })
     ),
     instructions: v.array(v.string()),
@@ -90,6 +94,18 @@ export default defineSchema({
     cookTime: v.optional(v.number()),
     servings: v.number(),
     dietaryTags: v.array(v.string()),
+    mealType: v.optional(v.union(
+      v.literal("Main Dish"),
+      v.literal("Side Dish"),
+      v.literal("Appetizer"),
+      v.literal("Dessert"),
+      v.literal("Snack"),
+      v.literal("Soup"),
+      v.literal("Salad"),
+      v.literal("Breakfast"),
+      v.literal("Beverage")
+    )),
+    proteinType: v.optional(v.string()),
     source: v.union(
       v.literal("ai_generated"),
       v.literal("user_created"),

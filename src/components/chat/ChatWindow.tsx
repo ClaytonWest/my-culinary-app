@@ -29,7 +29,11 @@ export function ChatWindow({
   const createConversation = useMutation(api.conversations.create);
   const chatWithAI = useAction(api.ai.chat);
 
-  const handleSend = async (content: string, imageStorageId?: Id<"_storage">) => {
+  const handleSend = async (
+    content: string,
+    imageStorageId?: Id<"_storage">,
+    mentionedRecipeIds?: Id<"recipes">[]
+  ) => {
     let activeConversationId = conversationId;
 
     try {
@@ -51,6 +55,7 @@ export function ChatWindow({
         await chatWithAI({
           conversationId: activeConversationId,
           messageId,
+          mentionedRecipeIds: mentionedRecipeIds || [],
         });
       } catch (error) {
         console.error("AI chat error:", error);

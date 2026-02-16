@@ -6,32 +6,41 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BookmarkPlus, Check, Clock, Users } from "lucide-react";
 import { useToast } from "@/components/common/Toast";
+import { useNavigate } from "react-router-dom";
 
 interface RecipeData {
   title: string;
   description: string;
-  ingredients: Array<{ name: string; amount: string; unit: string }>;
+  ingredients: Array<{ name: string; amount: string; unit: string; preparation?: string; optional?: boolean }>;
   instructions: string[];
   prepTime?: number;
   cookTime?: number;
   servings: number;
   dietaryTags: string[];
+  mealType?: string;
+  proteinType?: string;
 }
 
 interface RecipeCardProps {
   recipeJson: string;
   conversationId: Id<"conversations">;
   messageId: Id<"messages">;
+  linkedRecipeId?: Id<"recipes"> | null;
 }
 
 export function RecipeCard({
   recipeJson,
   conversationId,
   messageId,
+  linkedRecipeId,
 }: RecipeCardProps) {
   const createRecipe = useMutation(api.recipes.create);
-  const [saved, setSaved] = useState(false);
+  const linkRecipe = useMutation(api.messages.linkRecipe);
+  const navigate = useNavigate();
+  const alreadySaved = !!linkedRecipeId;
+  const [saved, setSaved] = useState(alreadySaved);
   const [saving, setSaving] = useState(false);
+  const [savedRecipeId, setSavedRecipeId] = useState<Id<"recipes"> | null>(linkedRecipeId ?? null);
   const { showToast } = useToast();
 
   let recipe: RecipeData;
@@ -44,20 +53,42 @@ export function RecipeCard({
   const handleSave = async () => {
     setSaving(true);
     try {
-      await createRecipe({
+      const recipeId = await createRecipe({
         ...recipe,
         dietaryTags: recipe.dietaryTags || [],
+        mealType: recipe.mealType as "Main Dish" | "Side Dish" | "Appetizer" | "Dessert" | "Snack" | "Soup" | "Salad" | "Breakfast" | "Beverage" | undefined,
+        proteinType: recipe.proteinType,
         source: "ai_generated",
         sourceConversationId: conversationId,
         sourceMessageId: messageId,
       });
+      // Link the recipe back to this message so it persists
+      await linkRecipe({ messageId, recipeId });
       setSaved(true);
-      showToast(`"${recipe.title}" saved to your recipe book!`, "success");
+      setSavedRecipeId(recipeId);
+      showToast(
+        <span>
+          "{recipe.title}" saved!{" "}
+          <button
+            onClick={() => navigate("/recipes", { state: { recipeId } })}
+            className="underline font-semibold hover:opacity-80"
+          >
+            View in Recipe Book
+          </button>
+        </span>,
+        "success"
+      );
     } catch (error) {
       console.error("Failed to save recipe:", error);
       showToast("Failed to save recipe. Please try again.", "error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleViewRecipe = () => {
+    if (savedRecipeId) {
+      navigate("/recipes", { state: { recipeId: savedRecipeId } });
     }
   };
 
@@ -89,25 +120,26 @@ export function RecipeCard({
               </span>
             </div>
           </div>
-          <Button
-            onClick={handleSave}
-            disabled={saved || saving}
-            variant={saved ? "outline" : "default"}
-            size="sm"
-            className={saved ? "bg-primary/10 text-primary border-primary/30" : ""}
-          >
-            {saved ? (
-              <>
-                <Check className="h-4 w-4 mr-1" />
-                Saved
-              </>
-            ) : (
-              <>
-                <BookmarkPlus className="h-4 w-4 mr-1" />
-                {saving ? "Saving..." : "Save"}
-              </>
-            )}
-          </Button>
+          {saved ? (
+            <Button
+              onClick={handleViewRecipe}
+              variant="outline"
+              size="sm"
+              className="bg-primary/10 text-primary border-primary/30"
+            >
+              <Check className="h-4 w-4 mr-1" />
+              Saved
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              size="sm"
+            >
+              <BookmarkPlus className="h-4 w-4 mr-1" />
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

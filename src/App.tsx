@@ -5,6 +5,7 @@ import { ChatPage } from "@/pages/ChatPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { RecipeBookPage } from "@/pages/RecipeBookPage";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 function AuthRedirect() {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -30,29 +31,16 @@ export default function App() {
       <Routes>
         <Route path="/auth" element={<AuthRedirect />} />
         <Route
-          path="/"
           element={
             <ProtectedRoute>
-              <ChatPage />
+              <AppLayout />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/recipes"
-          element={
-            <ProtectedRoute>
-              <RecipeBookPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <SettingsPage />
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route path="/" element={<ChatPage />} />
+          <Route path="/recipes" element={<RecipeBookPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

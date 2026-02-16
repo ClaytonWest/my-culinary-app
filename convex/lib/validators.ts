@@ -42,8 +42,10 @@ export function validatePrompt(prompt: string): string {
 // Zod schemas for complex validation
 export const IngredientSchema = z.object({
   name: z.string().min(1).max(100),
-  amount: z.string().min(1).max(50),
-  unit: z.string().max(30), // Allow "large tablespoons", "medium diced pieces", etc.
+  amount: z.string().max(50),
+  unit: z.string().max(30),
+  preparation: z.string().max(100).optional(),
+  optional: z.boolean().optional(),
 });
 
 export const RecipeInputSchema = z.object({
@@ -58,6 +60,8 @@ export const RecipeInputSchema = z.object({
   prepTime: z.number().int().min(0).max(1440).optional(),
   cookTime: z.number().int().min(0).max(1440).optional(),
   dietaryTags: z.array(z.string().max(50)).max(20).optional(),
+  mealType: z.string().max(50).optional(),
+  proteinType: z.string().max(50).optional(),
 });
 
 // Memory category validation

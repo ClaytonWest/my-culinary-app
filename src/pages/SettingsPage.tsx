@@ -2,8 +2,7 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { Button } from "@/components/ui/button";
 import { MemoryList } from "@/components/memory/MemoryList";
 import { AddMemoryForm } from "@/components/memory/AddMemoryForm";
-import { ChefHat, ArrowLeft, LogOut, Bug } from "lucide-react";
-import { Link } from "react-router-dom";
+import { ChefHat, LogOut, Bug } from "lucide-react";
 import { useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useState } from "react";
@@ -36,22 +35,17 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex-1 bg-background overflow-y-auto">
       {/* Header */}
-      <header className="border-b">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
-          <Link to="/" className="hover:opacity-70">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div className="flex items-center gap-2">
-            <ChefHat className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-semibold">Settings</h1>
-          </div>
+      <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-2">
+          <ChefHat className="h-6 w-6 text-primary" />
+          <h1 className="text-xl font-semibold">Settings</h1>
         </div>
       </header>
 
       {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="space-y-8">
           {/* Memory Section */}
           <section>
@@ -118,7 +112,7 @@ export function SettingsPage() {
             </Button>
           </section>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

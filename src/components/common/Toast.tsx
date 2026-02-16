@@ -5,13 +5,13 @@ type ToastType = "success" | "error" | "info" | "warning";
 
 interface Toast {
   id: string;
-  message: string;
+  message: ReactNode;
   type: ToastType;
 }
 
 interface ToastContextType {
   toasts: Toast[];
-  showToast: (message: string, type?: ToastType) => void;
+  showToast: (message: ReactNode, type?: ToastType) => void;
   dismissToast: (id: string) => void;
 }
 
@@ -32,7 +32,7 @@ interface ToastProviderProps {
 export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const showToast = useCallback((message: string, type: ToastType = "info") => {
+  const showToast = useCallback((message: ReactNode, type: ToastType = "info") => {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, message, type }]);
 
@@ -102,7 +102,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
       <span className="text-lg" aria-hidden="true">
         {typeIcons[toast.type]}
       </span>
-      <p className="flex-1 text-sm font-medium">{toast.message}</p>
+      <div className="flex-1 text-sm font-medium">{toast.message}</div>
       <button
         onClick={() => onDismiss(toast.id)}
         className="text-current opacity-70 hover:opacity-100 transition-opacity"

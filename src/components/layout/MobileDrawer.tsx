@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { X, ChefHat, Plus, Search, BookOpen, MessageSquare } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
@@ -25,8 +25,20 @@ export function MobileDrawer({
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+
   const conversations = useQuery(api.conversations.list, { limit: 20 });
+  const searchResults = useQuery(
+    api.conversations.search,
+    isSearching && searchTerm.trim()
+      ? { searchTerm: searchTerm.trim() }
+      : "skip"
+  );
   const removeConversation = useMutation(api.conversations.remove);
+
+  const displayedConversations =
+    isSearching && searchTerm.trim() ? searchResults : conversations;
 
   useEffect(() => {
     if (isMobileOpen) {
@@ -121,13 +133,45 @@ export function MobileDrawer({
           </button>
 
           <button
-            onClick={() => {}}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            onClick={() => {
+              setIsSearching(!isSearching);
+              if (isSearching) setSearchTerm("");
+            }}
+            className={cn(
+              "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-colors",
+              isSearching
+                ? "bg-primary text-primary-foreground font-medium"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
           >
             <Search className="h-5 w-5" />
             Search
           </button>
         </div>
+
+        {isSearching && (
+          <div className="px-3 pb-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search conversations..."
+                className="w-full pl-8 pr-8 py-1.5 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                autoFocus
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="px-3 py-2">
           <button
@@ -149,16 +193,18 @@ export function MobileDrawer({
             Your Chats
           </div>
           <div className="space-y-1">
-            {conversations === undefined ? (
+            {displayedConversations === undefined ? (
               <div className="text-center text-muted-foreground text-sm py-4">
                 Loading...
               </div>
-            ) : conversations.length === 0 ? (
+            ) : displayedConversations.length === 0 ? (
               <div className="text-center text-muted-foreground text-sm py-4">
-                No conversations yet
+                {isSearching && searchTerm.trim()
+                  ? "No results found"
+                  : "No conversations yet"}
               </div>
             ) : (
-              conversations.map((conversation) => (
+              displayedConversations.map((conversation) => (
                 <button
                   key={conversation._id}
                   onClick={() => handleSelectConversation(conversation._id)}

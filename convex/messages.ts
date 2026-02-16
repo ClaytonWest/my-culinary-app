@@ -6,7 +6,6 @@ import {
   internalMutation,
 } from "./_generated/server";
 import { requireAuth, requireOwnership, verifyFileOwnership } from "./lib/auth";
-import { Id } from "./_generated/dataModel";
 import { validatePrompt } from "./lib/validators";
 
 export const list = query({
@@ -76,10 +75,10 @@ export const send = mutation({
       messageCount: conversation.messageCount + 1,
     });
 
-    // Auto-generate title from first message if it's still "New Chat"
+    // Set immediate fallback title from first message so sidebar doesn't show "New Chat"
     if (conversation.title === "New Chat" && conversation.messageCount === 0) {
-      const title = validatedContent.slice(0, 50) + (validatedContent.length > 50 ? "..." : "");
-      await ctx.db.patch(args.conversationId, { title });
+      const fallbackTitle = validatedContent.slice(0, 50) + (validatedContent.length > 50 ? "..." : "");
+      await ctx.db.patch(args.conversationId, { title: fallbackTitle });
     }
 
     return messageId;
@@ -142,6 +141,24 @@ export const createAssistantMessage = internalMutation({
     }
 
     return messageId;
+  },
+});
+
+// Link a saved recipe to the message it came from
+export const linkRecipe = mutation({
+  args: {
+    messageId: v.id("messages"),
+    recipeId: v.id("recipes"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx);
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+    requireOwnership(message.userId, userId);
+
+    await ctx.db.patch(args.messageId, {
+      linkedRecipeId: args.recipeId,
+    });
   },
 });
 
