@@ -85,6 +85,8 @@ export default defineSchema({
         name: v.string(),
         amount: v.string(),
         unit: v.string(),
+        preparation: v.optional(v.string()),
+        optional: v.optional(v.boolean()),
       })
     ),
     instructions: v.array(v.string()),
@@ -103,20 +105,7 @@ export default defineSchema({
       v.literal("Breakfast"),
       v.literal("Beverage")
     )),
-    proteinType: v.optional(v.union(
-      v.literal("Chicken"),
-      v.literal("Beef"),
-      v.literal("Pork"),
-      v.literal("Seafood"),
-      v.literal("Fish"),
-      v.literal("Turkey"),
-      v.literal("Lamb"),
-      v.literal("Tofu"),
-      v.literal("Legumes"),
-      v.literal("Eggs"),
-      v.literal("Veggie"),
-      v.literal("Other")
-    )),
+    proteinType: v.optional(v.string()),
     source: v.union(
       v.literal("ai_generated"),
       v.literal("user_created"),

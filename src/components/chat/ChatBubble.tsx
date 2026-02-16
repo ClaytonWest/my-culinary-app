@@ -66,6 +66,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
             recipeJson={message.recipeJson}
             conversationId={message.conversationId}
             messageId={message._id}
+            linkedRecipeId={message.linkedRecipeId}
           />
         )}
       </div>

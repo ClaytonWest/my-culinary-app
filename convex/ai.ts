@@ -11,6 +11,7 @@ import {
 import {
   RECIPE_GENERATION_PROMPT,
   extractRecipeJson,
+  extractConversationTitle,
 } from "./lib/recipeGeneration";
 import { analyzeIngredientImage } from "./lib/imageAnalysis";
 
@@ -161,6 +162,15 @@ export const chat = action({
     });
     if (!userMessage) throw new Error("Message not found");
 
+    // Fetch conversation to check if this is the first message
+    const conversation = await ctx.runQuery(internal.conversations.getInternal, {
+      conversationId: args.conversationId,
+    });
+    const isFirstMessage = conversation ? conversation.messageCount <= 1 : false;
+    const titleInstruction = isFirstMessage
+      ? `\n\nIMPORTANT: This is the first message in this conversation. Include a concise 3-6 word title summarizing the user's request at the end of your response in this exact format:\n<!-- CONV_TITLE: Your Title Here -->`
+      : "";
+
     // Handle image if present
     let imageContext = "";
     if (userMessage.imageStorageId) {
@@ -250,7 +260,7 @@ ${instructions}`;
     // Build system prompt with memory context injected
     const systemPrompt = `${CULINARY_SYSTEM_PROMPT.replace("{memoryContext}", memoryContext || "No dietary profile stored yet.")}
 
-${RECIPE_GENERATION_PROMPT}${recipeContext}`;
+${RECIPE_GENERATION_PROMPT}${recipeContext}${titleInstruction}`;
 
     // Build messages for GPT (include image analysis context in history)
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
@@ -416,8 +426,19 @@ ${RECIPE_GENERATION_PROMPT}${recipeContext}`;
         "I'm your cooking assistant! I'd love to help you with recipes, meal planning, or food-related questions. What would you like to cook today?";
     }
 
+    // Extract conversation title if present (first message only)
+    const { displayText: afterTitleStrip, conversationTitle } = extractConversationTitle(aiResponse);
+
+    // Update conversation title if extracted
+    if (conversationTitle) {
+      await ctx.runMutation(internal.conversations.updateTitleInternal, {
+        id: args.conversationId,
+        title: conversationTitle,
+      });
+    }
+
     // Extract recipe JSON if present
-    const { displayText, recipeJson } = extractRecipeJson(aiResponse);
+    const { displayText, recipeJson } = extractRecipeJson(afterTitleStrip);
 
     // Store assistant message
     await ctx.runMutation(internal.messages.createAssistantMessage, {

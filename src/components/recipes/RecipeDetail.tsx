@@ -95,16 +95,45 @@ export function RecipeDetail({
             <CardTitle>Ingredients</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2">
-              {recipe.ingredients.map((ing, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
-                  <span>
-                    {ing.amount} {ing.unit} {ing.name}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            {(() => {
+              const required = recipe.ingredients.filter((ing) => !ing.optional);
+              const optional = recipe.ingredients.filter((ing) => ing.optional);
+              return (
+                <>
+                  <ul className="space-y-2">
+                    {required.map((ing, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
+                        <span>
+                          {ing.amount === "to taste"
+                            ? `${ing.name}${ing.preparation ? `, ${ing.preparation}` : ""}, to taste`
+                            : `${ing.amount} ${ing.unit} ${ing.name}${ing.preparation ? `, ${ing.preparation}` : ""}`}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {optional.length > 0 && (
+                    <>
+                      <p className="text-sm font-medium text-muted-foreground mt-4 mb-2">
+                        Optional
+                      </p>
+                      <ul className="space-y-2">
+                        {optional.map((ing, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 mt-2 flex-shrink-0" />
+                            <span className="text-muted-foreground">
+                              {ing.amount === "to taste"
+                                ? `${ing.name}${ing.preparation ? `, ${ing.preparation}` : ""}, to taste`
+                                : `${ing.amount} ${ing.unit} ${ing.name}${ing.preparation ? `, ${ing.preparation}` : ""}`}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
 

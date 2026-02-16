@@ -15,20 +15,7 @@ const mealTypeValidator = v.optional(v.union(
   v.literal("Beverage")
 ));
 
-const proteinTypeValidator = v.optional(v.union(
-  v.literal("Chicken"),
-  v.literal("Beef"),
-  v.literal("Pork"),
-  v.literal("Seafood"),
-  v.literal("Fish"),
-  v.literal("Turkey"),
-  v.literal("Lamb"),
-  v.literal("Tofu"),
-  v.literal("Legumes"),
-  v.literal("Eggs"),
-  v.literal("Veggie"),
-  v.literal("Other")
-));
+
 
 export const list = query({
   args: {
@@ -36,7 +23,6 @@ export const list = query({
     favoritesOnly: v.optional(v.boolean()),
     search: v.optional(v.string()),
     mealType: v.optional(v.string()),
-    proteinType: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await requireAuth(ctx);
@@ -77,9 +63,6 @@ export const list = query({
     if (args.mealType) {
       recipes = recipes.filter((r) => r.mealType === args.mealType);
     }
-    if (args.proteinType) {
-      recipes = recipes.filter((r) => r.proteinType === args.proteinType);
-    }
 
     // Sort favorites to the top
     recipes.sort((a, b) => {
@@ -116,6 +99,8 @@ export const create = mutation({
         name: v.string(),
         amount: v.string(),
         unit: v.string(),
+        preparation: v.optional(v.string()),
+        optional: v.optional(v.boolean()),
       })
     ),
     instructions: v.array(v.string()),
@@ -124,7 +109,7 @@ export const create = mutation({
     servings: v.number(),
     dietaryTags: v.array(v.string()),
     mealType: mealTypeValidator,
-    proteinType: proteinTypeValidator,
+    proteinType: v.optional(v.string()),
     source: v.union(
       v.literal("ai_generated"),
       v.literal("user_created"),
@@ -184,6 +169,8 @@ export const createInternal = internalMutation({
         name: v.string(),
         amount: v.string(),
         unit: v.string(),
+        preparation: v.optional(v.string()),
+        optional: v.optional(v.boolean()),
       })
     ),
     instructions: v.array(v.string()),
@@ -192,7 +179,7 @@ export const createInternal = internalMutation({
     servings: v.number(),
     dietaryTags: v.optional(v.array(v.string())),
     mealType: mealTypeValidator,
-    proteinType: proteinTypeValidator,
+    proteinType: v.optional(v.string()),
     source: v.union(
       v.literal("ai_generated"),
       v.literal("user_created"),

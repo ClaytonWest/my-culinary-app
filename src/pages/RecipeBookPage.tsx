@@ -1,37 +1,53 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Doc } from "../../convex/_generated/dataModel";
+import { Doc, Id } from "../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RecipeList } from "@/components/recipes/RecipeList";
 import { RecipeDetail } from "@/components/recipes/RecipeDetail";
-import { ChefHat, ArrowLeft, Search, Heart } from "lucide-react";
-import { Link } from "react-router-dom";
+import { ChefHat, Search, Heart } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useToast } from "@/components/common/Toast";
 
 export function RecipeBookPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const recipeIdFromState = (location.state as { recipeId?: Id<"recipes"> } | null)?.recipeId ?? null;
   const [search, setSearch] = useState("");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [mealTypeFilter, setMealTypeFilter] = useState<string>("");
-  const [proteinTypeFilter, setProteinTypeFilter] = useState<string>("");
   const [selectedRecipe, setSelectedRecipe] = useState<Doc<"recipes"> | null>(
     null
   );
   const { showToast } = useToast();
 
+  // Deep link: fetch recipe by ID from navigation state
+  const linkedRecipe = useQuery(
+    api.recipes.get,
+    recipeIdFromState ? { id: recipeIdFromState } : "skip"
+  );
+
+  // Auto-select linked recipe when it loads
+  useEffect(() => {
+    if (linkedRecipe && !selectedRecipe) {
+      setSelectedRecipe(linkedRecipe);
+      // Clear the state so refreshing doesn't re-open
+      navigate("/recipes", { replace: true, state: {} });
+    }
+  }, [linkedRecipe, selectedRecipe, navigate]);
+
   const recipes = useQuery(api.recipes.list, {
     search: search || undefined,
     favoritesOnly: showFavoritesOnly || undefined,
     mealType: mealTypeFilter || undefined,
-    proteinType: proteinTypeFilter || undefined,
   });
   const toggleFavorite = useMutation(api.recipes.toggleFavorite);
   const deleteRecipe = useMutation(api.recipes.remove);
 
-  const handleToggleFavorite = async (id: typeof selectedRecipe extends null ? never : typeof selectedRecipe._id) => {
+  const handleToggleFavorite = async (id: Id<"recipes">) => {
     try {
       await toggleFavorite({ id });
       showToast("Recipe updated!", "success");
@@ -40,7 +56,7 @@ export function RecipeBookPage() {
     }
   };
 
-  const handleDelete = async (id: typeof selectedRecipe extends null ? never : typeof selectedRecipe._id) => {
+  const handleDelete = async (id: Id<"recipes">) => {
     try {
       await deleteRecipe({ id });
       showToast("Recipe deleted", "success");
@@ -52,19 +68,14 @@ export function RecipeBookPage() {
   // If a recipe is selected, show detail view
   if (selectedRecipe) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b">
-          <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
-            <Link to="/" className="hover:opacity-70">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <div className="flex items-center gap-2">
-              <ChefHat className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-semibold">Recipe Book</h1>
-            </div>
+      <div className="flex-1 bg-background overflow-y-auto">
+        <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-10">
+          <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-2">
+            <ChefHat className="h-6 w-6 text-primary" />
+            <h1 className="text-xl font-semibold">Recipe Book</h1>
           </div>
         </header>
-        <main className="max-w-4xl mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto px-4 py-8">
           <RecipeDetail
             recipe={selectedRecipe}
             onBack={() => setSelectedRecipe(null)}
@@ -76,28 +87,23 @@ export function RecipeBookPage() {
               });
             }}
           />
-        </main>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex-1 bg-background overflow-y-auto">
       {/* Header */}
-      <header className="border-b">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
-          <Link to="/" className="hover:opacity-70">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div className="flex items-center gap-2">
-            <ChefHat className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-semibold">Recipe Book</h1>
-          </div>
+      <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-2">
+          <ChefHat className="h-6 w-6 text-primary" />
+          <h1 className="text-xl font-semibold">Recipe Book</h1>
         </div>
       </header>
 
       {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Search and filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-4">
           <div className="relative flex-1">
@@ -140,25 +146,6 @@ export function RecipeBookPage() {
             <option value="Breakfast">Breakfast</option>
             <option value="Beverage">Beverage</option>
           </select>
-          <select
-            value={proteinTypeFilter}
-            onChange={(e) => setProteinTypeFilter(e.target.value)}
-            className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <option value="">All Proteins</option>
-            <option value="Chicken">Chicken</option>
-            <option value="Beef">Beef</option>
-            <option value="Pork">Pork</option>
-            <option value="Seafood">Seafood</option>
-            <option value="Fish">Fish</option>
-            <option value="Turkey">Turkey</option>
-            <option value="Lamb">Lamb</option>
-            <option value="Tofu">Tofu</option>
-            <option value="Legumes">Legumes</option>
-            <option value="Eggs">Eggs</option>
-            <option value="Veggie">Veggie</option>
-            <option value="Other">Other</option>
-          </select>
         </div>
 
         {/* Recipe list */}
@@ -174,7 +161,7 @@ export function RecipeBookPage() {
             onDelete={(id) => handleDelete(id)}
           />
         )}
-      </main>
+      </div>
     </div>
   );
 }

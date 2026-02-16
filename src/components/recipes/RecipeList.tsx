@@ -36,15 +36,16 @@ export function RecipeList({
           className="cursor-pointer hover:shadow-md transition-shadow"
           onClick={() => onSelect(recipe)}
         >
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <h3 className="font-semibold line-clamp-1">{recipe.title}</h3>
+          <CardContent className="p-4 h-[200px] flex flex-col">
+            {/* Top: title + favorite */}
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-semibold line-clamp-1 flex-1">{recipe.title}</h3>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggleFavorite(recipe._id);
                 }}
-                className="p-1"
+                className="p-1 flex-shrink-0"
               >
                 <Heart
                   className={cn(
@@ -56,23 +57,29 @@ export function RecipeList({
                 />
               </button>
             </div>
-            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-              {recipe.description}
-            </p>
-            <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
-              {(recipe.prepTime || recipe.cookTime) && (
+
+            {/* Middle: description + meta (grows to fill) */}
+            <div className="flex-1 min-h-0 mt-1">
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {recipe.description}
+              </p>
+              <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                {(recipe.prepTime || recipe.cookTime) && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {(recipe.prepTime || 0) + (recipe.cookTime || 0)}m
+                  </span>
+                )}
                 <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {(recipe.prepTime || 0) + (recipe.cookTime || 0)}m
+                  <Users className="h-3 w-3" />
+                  {recipe.servings}
                 </span>
-              )}
-              <span className="flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                {recipe.servings}
-              </span>
+              </div>
             </div>
-            {(recipe.mealType || recipe.proteinType || recipe.dietaryTags.length > 0) && (
-              <div className="flex flex-wrap gap-1 mt-2">
+
+            {/* Bottom: tags + delete (always pinned) */}
+            <div className="flex items-end justify-between gap-2 mt-2">
+              <div className="flex flex-wrap gap-1 min-h-[24px]">
                 {recipe.mealType && (
                   <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded">
                     {recipe.mealType}
@@ -83,7 +90,7 @@ export function RecipeList({
                     {recipe.proteinType}
                   </span>
                 )}
-                {recipe.dietaryTags.slice(0, 3).map((tag) => (
+                {recipe.dietaryTags.slice(0, 2).map((tag) => (
                   <span
                     key={tag}
                     className="text-xs bg-muted px-2 py-0.5 rounded"
@@ -91,17 +98,16 @@ export function RecipeList({
                     {tag}
                   </span>
                 ))}
-                {recipe.dietaryTags.length > 3 && (
+                {recipe.dietaryTags.length > 2 && (
                   <span className="text-xs text-muted-foreground">
-                    +{recipe.dietaryTags.length - 3}
+                    +{recipe.dietaryTags.length - 2}
                   </span>
                 )}
               </div>
-            )}
-            <div className="flex justify-end mt-3">
               <Button
                 variant="ghost"
                 size="sm"
+                className="flex-shrink-0 h-8 w-8 p-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (confirm("Delete this recipe?")) {

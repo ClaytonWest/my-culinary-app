@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -44,7 +45,7 @@ export function MemoryList() {
   const deleteMemory = useMutation(api.memories.deleteMemory);
   const { showToast } = useToast();
 
-  const handleDelete = async (id: typeof memories extends undefined ? never : typeof memories[0]["_id"]) => {
+  const handleDelete = async (id: Id<"userMemories">) => {
     try {
       await deleteMemory({ id });
       showToast("Memory removed", "success");
